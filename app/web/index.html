@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+
+        .language-select {
+            padding: 8px 15px;
+            font-size: 14px;
+            margin: 0 10px;
+            border-radius: 4px;
+        }
+
+        #startStopButton,
+        #sendMessageButton,
+        #getResponseButton,
+        #speakResponseButton,
+        #stopSpeakingButton {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        #stopSpeakingButton {
+            margin-left: 10px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        #stopSpeakingButton:hover {
+            background-color: #cc0000;
+        }
+
+        #promptDiv,
+        #responseDiv {
+            margin-top: 20px;
+            font-size: 18px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            min-height: 50px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Speech To Text</h1>
+    <select id="languageSelect" class="language-select">
+        <option value="auto">Auto (Browser Language)</option>
+    </select>
+    <hr>
+    <button id="startStopButton">Start Listening</button>
+    <button id="sendMessageButton">Send message</button>
+    <button id="getResponseButton">Get response</button>
+    <button id="speakResponseButton">Speak response</button>
+    <button id="stopSpeakingButton">Stop Speaking</button>
+    <div id="promptDiv" contenteditable="true"></div>
+    <div id="responseDiv" contenteditable="true"></div>
+    <script>
+        /**
+         * Main application controller for Speech to Text functionality
+         */
+        class SpeechToTextApp {
+            constructor() {
+                // DOM Elements
+                this.elements = {
+                    languageSelect: document.getElementById('languageSelect'),
+                    startStopButton: document.getElementById('startStopButton'),
+                    sendMessageButton: document.getElementById('sendMessageButton'),
+                    getResponseButton: document.getElementById('getResponseButton'),
+                    speakResponseButton: document.getElementById('speakResponseButton'),
+                    stopSpeakingButton: document.getElementById('stopSpeakingButton'),
+                    promptDiv: document.getElementById('promptDiv'),
+                    responseDiv: document.getElementById('responseDiv'),
+                };
+
+                // Configuration
+                this.config = {
+                    API_PROMPT_ENDPOINT: 'http://127.0.0.1:8000/prompt/',
+                    API_RESPONSE_ENDPOINT: 'http://127.0.0.1:8000/response/',
+                    API_CLEAR_ENDPOINT: 'http://127.0.0.1:8000/clearPromptResponse/',
+                    speechSettings: {
+                        rate: 1.0,
+                        pitch: 1.0,
+                        volume: 1.0
+                    },
+                    supportedLanguages: {
+                        'en-US': 'English (US)',
+                        'es-ES': 'Español (Spain)',
+                        'fr-FR': 'Français (France)',
+                        'de-DE': 'Deutsch (Germany)',
+                        'it-IT': 'Italiano (Italy)',
+                        'pt-BR': 'Português (Brazil)',
+                        'ja-JP': '日本語 (Japan)',
+                        'ko-KR': '한국어 (Korea)',
+                        'zh-CN': '中文 (China)'
+                    },
+                    voiceSettings: {
+                        preferredGenders: ['female'], // Ordered preference
+                        fallbackPolicy: 'any-voice', // 'any-voice' or 'none'
+                        // Add voice selection timeout
+                        voiceSelectionTimeout: 2000 // 2 seconds to wait for voices
+                    },
+                };
+
+                // // Add voice configuration
+                // this.config.voiceSettings = {
+                //     preferredGender: 'female', // 'male' or 'female'
+                //     // fallbackVoice: null
+                //     fallbackPolicy: 'any-voice',
+                //     // Add voice selection timeout
+                //     voiceSelectionTimeout: 2000 // 2 seconds to wait for voices
+                // };
+
+                // State
+                this.state = {
+                    isListening: false,
+                    recognition: null,
+                    synth: window.speechSynthesis,
+                    utterance: new SpeechSynthesisUtterance(),
+                    currentLanguage: 'auto',
+                    voices: [],
+                    selectedVoice: null,
+                    autoRefreshInterval: null, // Add this line to track the interval
+                };
+
+                // Initialize voice settings
+                this.initializeVoices();
+
+                this.initialize();
+            }
+
+            /**
+             * Initialize the application
+             */
+            initialize() {
+                this.populateLanguageSelect();
+                this.setupSpeechRecognition();
+                this.setupEventListeners();
+                this.setupCleanup();
+            }
+
+            /**
+             * Initialize speech synthesis voices
+             */
+            initializeVoices() {
+                // Load available voices
+                this.state.voices = this.state.synth.getVoices();
+                
+                // Chrome workaround - needs this trigger
+                if (this.state.voices.length === 0) {
+                    const dummy = new SpeechSynthesisUtterance('');
+                    this.state.synth.speak(dummy);
+                    this.state.synth.cancel();
+                    this.state.voices = this.state.synth.getVoices();
+                }
+
+                // Fallback for stubborn cases
+                if (this.state.voices.length === 0) {
+                    setTimeout(() => {
+                        this.state.voices = this.state.synth.getVoices();
+                        console.log('Voices loaded after delay:', this.state.voices);
+                    }, 500);
+                }
+
+                // Handle voice loading in Chrome
+                if (this.state.synth.onvoiceschanged !== undefined) {
+                    this.state.synth.onvoiceschanged = () => {
+                        this.state.voices = this.state.synth.getVoices();
+                        this.selectPreferredVoice();
+                    };
+                }
+                
+                this.selectPreferredVoice();
+            }
+
+            /**
+             * Wait for voices to be loaded with timeout
+             */
+            async waitForVoices() {
+                return new Promise((resolve) => {
+                    const checkVoices = () => {
+                        if (this.state.voices.length > 0) {
+                            resolve();
+                        } else if (this.config.voiceSettings.voiceSelectionTimeout <= 0) {
+                            console.warn('Voice loading timeout');
+                            resolve();
+                        } else {
+                            this.config.voiceSettings.voiceSelectionTimeout -= 100;
+                            setTimeout(checkVoices, 100);
+                        }
+                    };
+                    checkVoices();
+                });
+            }
+
+            /**
+             * Select preferred voice with proper error handling
+             */
+            async selectPreferredVoice() {
+                const targetLanguage = this.getRecognitionLanguage();
+                
+                // // Filter voices by language and gender
+                // const preferredVoices = this.state.voices.filter(voice => {
+                //     const matchesLanguage = voice.lang === targetLanguage;
+                //     const matchesGender = voice.name.toLowerCase().includes(this.config.voiceSettings.preferredGender);
+                //     return matchesLanguage && matchesGender;
+                // });
+
+                // // Select first matching voice or fallback
+                // this.state.selectedVoice = preferredVoices[0] || 
+                //     this.state.voices.find(voice => voice.lang === targetLanguage) ||
+                //     this.state.voices[0];
+
+                // Find first voice matching language and preferred gender
+                for (const gender of this.config.voiceSettings.preferredGenders) {
+                    const matchingVoice = this.state.voices.find(voice => {
+                        const langMatch = voice.lang === targetLanguage;
+                        const genderMatch = voice.name.toLowerCase().includes(gender);
+                        return langMatch && genderMatch;
+                    });
+                    
+                    if (matchingVoice) {
+                        this.state.selectedVoice = matchingVoice;
+                        return;
+                    }
+                }
+
+                // Fallback logic
+                if (this.config.voiceSettings.fallbackPolicy === 'any-voice') {
+                    this.state.selectedVoice = this.state.voices.find(voice => 
+                        voice.lang === targetLanguage
+                    ) || this.state.voices[0];
+                }
+
+                // AA1 new code
+                // try {
+                //     // Ensure voices are loaded
+                //     await this.waitForVoices();
+                    
+                //     // Safeguard for empty voices array
+                //     if (!this.state.voices || this.state.voices.length === 0) {
+                //         console.warn('No voices available');
+                //         return;
+                //     }
+
+                //     // Ensure preferredGenders is iterable
+                //     const gendersToTry = Array.isArray(this.config.voiceSettings.preferredGenders) 
+                //         ? this.config.voiceSettings.preferredGenders 
+                //         : ['female']; // Default fallback
+
+                //     const targetLanguage = this.getRecognitionLanguage();
+                    
+                //     // Voice selection logic with safeguards
+                //     for (const gender of gendersToTry) {
+                //         const matchingVoice = this.state.voices.find(voice => {
+                //             try {
+                //                 const langMatch = voice.lang === targetLanguage;
+                //                 const genderMatch = voice.name.toLowerCase().includes(gender.toLowerCase());
+                //                 return langMatch && genderMatch;
+                //             } catch (e) {
+                //                 console.warn('Voice matching error:', e);
+                //                 return false;
+                //             }
+                //         });
+                        
+                //         if (matchingVoice) {
+                //             this.state.selectedVoice = matchingVoice;
+                //             return;
+                //         }
+                //     }
+
+                //     // Fallback handling
+                //     if (this.config.voiceSettings.fallbackPolicy === 'any-voice') {
+                //         this.state.selectedVoice = this.state.voices.find(voice => 
+                //             voice.lang === targetLanguage
+                //         ) || this.state.voices[0];
+                //     }
+                // } catch (error) {
+                //     console.error('Voice selection failed:', error);
+                // }
+
+            }
+
+            /**
+             * Populate language select dropdown
+             */
+            populateLanguageSelect() {
+                const select = this.elements.languageSelect;
+                
+                // Create options from supported languages
+                Object.entries(this.config.supportedLanguages).forEach(([code, name]) => {
+                    const option = document.createElement('option');
+                    option.value = code;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+
+                // Load saved preference or use browser language
+                const savedLang = localStorage.getItem('speechLang');
+                this.state.currentLanguage = savedLang || 'auto';
+                select.value = this.state.currentLanguage;
+            }
+
+            /**
+             * Get target recognition language
+             */
+            getRecognitionLanguage() {
+                if (this.state.currentLanguage === 'auto') {
+                    // Get browser language and find best match
+                    const browserLang = navigator.language || 'en-US';
+                    return Object.keys(this.config.supportedLanguages)
+                        .find(lang => lang === browserLang || lang.startsWith(browserLang.split('-')[0]))
+                        || 'en-US';
+                }
+                return this.state.currentLanguage;
+            }
+
+            /**
+             * Set up speech recognition functionality
+             */
+            setupSpeechRecognition() {
+                if (!this.isSpeechRecognitionSupported()) {
+                    this.handleUnsupportedBrowser();
+                    return;
+                }
+
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.state.recognition = new SpeechRecognition();
+
+                // Configure recognition settings
+                this.state.recognition.lang = 'en-US'; // Set language
+                this.state.recognition.interimResults = false; // Only final results
+                this.state.recognition.maxAlternatives = 1; // Only top alternative
+                this.state.recognition.continuous = true; // Keep listening until stopped
+
+                // Set language using dynamic detection
+                this.state.recognition.lang = this.getRecognitionLanguage();
+
+                this.setupRecognitionHandlers();
+            }
+
+            /**
+             * Check if speech recognition is supported in the browser
+             * @returns {boolean} True if supported, false otherwise
+             */
+            isSpeechRecognitionSupported() {
+                return 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+            }
+
+            /**
+             * Handle case when browser doesn't support speech recognition
+             */
+            handleUnsupportedBrowser() {
+                console.error("SpeechRecognition is not supported in this browser.");
+                this.elements.startStopButton.textContent = 'Speech Recognition Not Supported';
+                this.elements.startStopButton.disabled = true;
+                this.elements.startStopButton.classList.add('disabled');
+                alert("Your browser does not support Speech Recognition.\nPlease use Chrome, or Edge.");
+            }
+
+            /**
+             * Set up event handlers for speech recognition
+             */
+            setupRecognitionHandlers() {
+                const { recognition } = this.state;
+
+                recognition.onresult = (event) => {
+                    const transcript = Array.from(event.results)
+                        .slice(event.resultIndex)
+                        .map(result => result[0].transcript)
+                        .join('');
+                    
+                    this.elements.promptDiv.innerHTML = transcript;
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech recognition error", event);
+                    this.displayMessage(`Error: ${event.error}`);
+                };
+
+                recognition.onend = () => {
+                    this.state.isListening = false;
+                    this.updateButtonState();
+                };
+            }
+
+            /**
+             * Set up event listeners for UI elements
+             */
+            setupEventListeners() {
+                if (!this.state.recognition) return;
+
+                this.elements.startStopButton.addEventListener('click', () => this.toggleListening());
+                this.elements.sendMessageButton.addEventListener('click', async () => await this.sendMessage());
+                this.elements.getResponseButton.addEventListener('click', async () => await this.getResponse());
+                this.elements.speakResponseButton.addEventListener('click', () => this.speakResponse());
+                this.elements.stopSpeakingButton.addEventListener('click', () => this.stopSpeaking());
+
+                // Add language change listener
+                this.elements.languageSelect.addEventListener('change', (e) => {
+                    this.state.currentLanguage = e.target.value;
+                    localStorage.setItem('speechLang', e.target.value);
+                    
+                    // Reinitialize recognition with new language
+                    if (this.state.recognition) {
+                        this.state.recognition.lang = this.getRecognitionLanguage();
+                        
+                        // Restart recognition if active
+                        if (this.state.isListening) {
+                            this.state.recognition.stop();
+                            this.state.recognition.start();
+                        }
+                    }
+                });
+            }
+
+            /**
+             * Toggle speech recognition listening state
+             */
+            toggleListening() {
+                this.state.isListening = !this.state.isListening;
+                if (this.state.isListening) {
+                    this.state.recognition.start();
+                } else {
+                    this.state.recognition.stop();
+                }
+                this.updateButtonState();
+            }
+
+            /**
+             * Update the button text based on current listening state
+             */
+            updateButtonState() {
+                this.elements.startStopButton.textContent = 
+                    this.state.isListening ? 'Stop Listening' : 'Start Listening';
+            }
+
+            /**
+             * Get response from the API
+             */
+            async getResponse() {
+                try {
+                    const response = await this.getMessageFromAPI();
+                    this.handleApiResponse(response);
+                } catch (error) {
+                    console.error('API Error:', error);
+                    this.displayMessage('Failed to get response from server');
+                }
+            }
+
+            async getMessageFromAPI() {
+                const url = `${this.config.API_RESPONSE_ENDPOINT}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+                // const data = await response.json();
+                // return data.message;
+                // document.getElementById('message').textContent = data.message;
+                // return await response.json();
+            }
+            
+            /**
+             * Send the current message to the API
+             */
+            async sendMessage() {
+                const message = this.elements.promptDiv.innerHTML;
+                try {
+                    .....
+
+                    const response = await this.sendMessageToAPI(message);
+                    this.handleApiResponse(response);
+                } catch (error) {
+                    console.error('API Error:', error);
+                    this.displayMessage('Failed to get response from server');
+                }
+            }
+
+            /**
+             * Send message to the API endpoint
+             * @param {string} message - The message to send
+             * @returns {Promise<Object>} API response
+             */
+            async sendMessageToAPI(message) {
+                const url = `${this.config.API_PROMPT_ENDPOINT}`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: message })
+                });
+
+                if (response.ok) {
+                    this.startAutoRefresh();
+                }
+                else {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json();
+            }
+
+            /**
+             * Handle the API response by displaying and speaking it
+             * @param {Object} response - The API response
+             */
+            handleApiResponse(response) {
+                this.displayMessage(response.message);
+            }
+
+            /**
+             * Display a message in the UI and speak it aloud
+             * @param {string} text - The message to display and speak
+             */
+            displayMessage(text) {
+                if (this.elements.responseDiv.innerHTML == text) {
+                    return;
+                }
+
+                this.elements.responseDiv.innerHTML = text;
+                this.speak(text);
+            }
+
+            /**
+             * Convert text to speech
+             * @param {string} text - The text to speak
+             */
+            speak(text) {
+                try {
+                    if (this.state.synth.speaking) {
+                        console.warn('Speech synthesis is already speaking');
+                        return;
+                    }
+                    
+                    // Refresh voice selection on each speak
+                    this.selectPreferredVoice();
+
+                    // Configure utterance
+                    this.state.utterance.text = text;
+                    this.state.utterance.voice = this.state.selectedVoice;
+                    this.state.utterance.rate = this.config.speechSettings.rate;
+                    this.state.utterance.pitch = this.config.speechSettings.pitch;
+                    this.state.utterance.volume = this.config.speechSettings.volume;
+                    this.state.utterance.lang = this.state.selectedVoice?.lang || 'en-US';
+                    
+                    // Speak with selected voice
+                    this.state.synth.speak(this.state.utterance);
+                    
+                    // Event handlers
+                    this.state.utterance.onend = () => {
+                        console.log('Speech synthesis completed');
+                    };
+                    
+                    this.state.utterance.onerror = (event) => {
+                        console.error('Speech synthesis error:', event);
+                    };
+                } catch (error) {
+                    console.error('Speech synthesis failed:', error);
+                }
+            }
+
+            /**
+             * Speak the content of the response div or a fallback message
+             */
+            speakResponse() {
+                const responseText = this.elements.responseDiv.textContent.trim();
+                const fallbackMessage = 'No response text to speak';
+                const message = responseText || fallbackMessage;
+
+                if (!responseText) {
+                    console.warn(fallbackMessage);
+                }
+
+                this.speak(message);
+            }
+
+            /**
+             * Stop any ongoing speech synthesis
+             */
+            stopSpeaking() {
+                if (this.state.synth.speaking) {
+                    this.state.synth.cancel();
+                    this.stopAutoRefresh();
+                    console.log('Speech stopped');
+                }
+            }
+
+            /**
+             * Set up cleanup handlers for when the page unloads
+             */
+            setupCleanup() {
+                window.addEventListener('beforeunload', () => this.cleanup());
+            }
+
+            /**
+             * Start auto-refreshing the response every 10 seconds
+             */
+            startAutoRefresh() {
+                // Clear any existing interval first
+                if (this.state.autoRefreshInterval) {
+                    clearInterval(this.state.autoRefreshInterval);
+                }
+                
+                // Set up new interval to call getResponse every 10 seconds
+                this.state.autoRefreshInterval = setInterval(async () => {
+                    console.log('Auto-refreshing response...');
+                    await this.getResponse();
+                }, 10000); // 10000 milliseconds = 10 seconds
+                
+                console.log('Auto-refresh started - checking for responses every 10 seconds');
+            }
+
+            /**
+             * Stop the auto-refresh interval
+             */
+            stopAutoRefresh() {
+                if (this.state.autoRefreshInterval) {
+                    clearInterval(this.state.autoRefreshInterval);
+                    this.state.autoRefreshInterval = null;
+                    console.log('Auto-refresh stopped');
+                }
+            }
+
+            /**
+             * Clean up resources (stop speech synthesis and intervals)
+             */
+            cleanup() {
+                if (this.state.synth.speaking) {
+                    this.state.synth.cancel();
+                }
+                
+                // Also clear the interval when cleaning up
+                this.stopAutoRefresh();
+            }
+        }
+
+        // Initialize the application when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new SpeechToTextApp();
+        });
+    </script>
+</body>
+</html>

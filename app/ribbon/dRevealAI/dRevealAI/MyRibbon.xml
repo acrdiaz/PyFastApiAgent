@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+  <ribbon>
+    <tabs>
+      <tab idMso="TabAddIns" label="dRevealAI">
+        <group id="MyGroup"
+               label="Standard">
+            <button id="MyButton" label="Say Hi" size="large" onAction="MyButton_Click" imageMso="HappyFace" />
+            <button id="GeneralSummaryButton" label="General Summary" size="large" onAction="GetGeneralSummary_ClickAsync" imageMso="Search" />
+            <button id="ListInboxButton" label="Summarize Emails" size="large" onAction="GetInboxEmails_ClickAsync" imageMso="Search" />
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>
+

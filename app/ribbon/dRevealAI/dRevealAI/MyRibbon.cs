@@ -10,12 +10,12 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Contexts;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using Office = Microsoft.Office.Core;
 using Outlook = Microsoft.Office.Interop.Outlook;
-
 
 namespace dRevealAI
 {
@@ -73,7 +73,14 @@ namespace dRevealAI
 
         private async void SuggestReply(Outlook.MailItem mailItem)
         {
-            string prompt = $"Suggest 3 professional responses to this email:\n\n{mailItem.Body}";
+            //string prompt = $"Suggest 3 professional responses to this email:\n\n{mailItem.Body}";
+            string prompt =
+$"Suggest 3 email replies formatted EXACTLY as:\n" +
+$"1. Formal: [Professional tone, full sentences]\n" +
+$"2. Neutral: [Concise but polite]\n" +
+$"3. Friendly: [Casual with emojis if appropriate]\n\n" +
+$"Original email:\n\n{mailItem.Body}";
+
             string suggestions = await ProcessWithAI(prompt);
             ShowResult("Suggested Replies", suggestions);
         }
@@ -121,19 +128,52 @@ namespace dRevealAI
 
         private void ShowResult(string title, string content)
         {
-            using (var form = new Form { Text = title, Width = 600, Height = 400 })
+            using (var form = new Form
             {
-                var textBox = new TextBox
+                Text = title,
+                Width = 700,
+                Height = 500,
+                StartPosition = FormStartPosition.CenterScreen,
+                Font = new Font("Segoe UI", 10),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false
+            })
+            {
+                var textBox = new RichTextBox
                 {
-                    Multiline = true,
+                    Text = FormatAiResponse(content),
                     Dock = DockStyle.Fill,
-                    ScrollBars = ScrollBars.Vertical,
-                    Text = content,
-                    Font = new Font("Segoe UI", 10)
+                    ReadOnly = true,
+                    BackColor = Color.White,
+                    BorderStyle = BorderStyle.None,
+                    Margin = new Padding(10),
+                    ScrollBars = RichTextBoxScrollBars.Vertical
                 };
+
+                var btnCopy = new Button
+                {
+                    Text = "Copy to Clipboard",
+                    Dock = DockStyle.Bottom,
+                    Height = 40,
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    BackColor = Color.LightGray
+                };
+                btnCopy.Click += (s, e) => Clipboard.SetText(textBox.Text);
+
+                form.Controls.Add(btnCopy);
                 form.Controls.Add(textBox);
                 form.ShowDialog();
             }
+        }
+
+        private string FormatAiResponse(string rawText)
+        {
+            // Format AI response with colors and bullets
+            return rawText
+                .Replace("1. Formal:", "● [Formal] ")
+                .Replace("2. Neutral:", "● [Neutral] ")
+                .Replace("3. Friendly:", "● [Friendly] ")
+                .Replace("\n", "\n    "); // Indent replies
         }
         #endregion
 

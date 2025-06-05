@@ -2,15 +2,16 @@
 <customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
   <ribbon>
     <tabs>
-      <tab idMso="TabAddIns" label="dRevealAI">
-        <group id="MyGroup"
-               label="Standard">
-            <button id="MyButton" label="Say Hi" size="large" onAction="MyButton_Click" imageMso="HappyFace" />
-            <button id="GeneralSummaryButton" label="General Summary" size="large" onAction="GetGeneralSummary_ClickAsync" imageMso="Search" />
-            <button id="ListInboxButton" label="Summarize Emails" size="large" onAction="GetInboxEmails_ClickAsync" imageMso="Search" />
+      <tab idMso="TabAddIns" label="dReveal AI">
+        <group id="groupEmail" label="Email AI Tools">
+          <button id="btnSummarize" label="Summarize" size="large" onAction="Button_Click"
+                  imageMso="ReviewAcceptChanges" supertip="Generate summary of selected email"/>
+          <button id="btnSuggestReply" label="Suggest Reply" size="large" onAction="Button_Click"
+                  imageMso="MailReplyToAll" supertip="Get AI-generated response suggestions"/>
+          <button id="btnDraftEmail" label="Draft Response" size="large" onAction="Button_Click"
+                  imageMso="MailCompose" supertip="Create a draft response using AI"/>
         </group>
       </tab>
     </tabs>
   </ribbon>
 </customUI>
-

@@ -11,6 +11,18 @@
           <button id="btnDraftEmail" label="Draft Response" size="large" onAction="Button_Click"
                   imageMso="MailCompose" supertip="Create a draft response using AI"/>
         </group>
+        <group id="groupTools" label="Date Filters">
+          <comboBox id="cmbDateRange"
+                   label="Date Range"
+
+                   onChange="OnDateRangeChanged">
+            <item id="today" label="Today"/>
+            <item id="yesterday" label="Yesterday"/>
+            <item id="thisWeek" label="This Week"/>
+          </comboBox>
+          <button id="btnListEmails" label="List Emails"
+                 onAction="ListEmails_Click" imageMso="ShowTimeSlots"/>
+        </group>
       </tab>
     </tabs>
   </ribbon>

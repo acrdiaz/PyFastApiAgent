@@ -5,6 +5,7 @@ using System.Text;
 using System.Xml.Linq;
 using Outlook = Microsoft.Office.Interop.Outlook;
 using Office = Microsoft.Office.Core;
+using dReveal.Common;
 
 namespace dRevealAI
 {
@@ -26,6 +27,8 @@ namespace dRevealAI
 
         protected override Microsoft.Office.Core.IRibbonExtensibility CreateRibbonExtensibilityObject()
         {
+            FeedbackLogger.AnalyzeFeedback();
+
             myRibbon = new MyRibbon();
             return myRibbon;
         }

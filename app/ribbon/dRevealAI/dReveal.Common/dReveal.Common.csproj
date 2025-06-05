@@ -149,6 +149,7 @@
   <ItemGroup>
     <Compile Include="AIServiceProvider.cs" />
     <Compile Include="AISettings.cs" />
+    <Compile Include="FeedbackLogger.cs" />
     <Compile Include="IAIService.cs" />
     <Compile Include="LLM_Service\GeminiService.cs" />
     <Compile Include="LLM_Service\OpenAIService.cs" />

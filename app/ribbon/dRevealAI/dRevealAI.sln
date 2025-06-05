@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35806.99 d17.13
+VisualStudioVersion = 17.13.35806.99
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dRevealAI", "dRevealAI\dRevealAI.csproj", "{E020301E-7245-4F5A-8478-1382AB97F92F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dReveal.Outlook.Addin", "dRevealAI\dReveal.Outlook.Addin.csproj", "{E020301E-7245-4F5A-8478-1382AB97F92F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dReveal.Common", "dReveal.Common\dReveal.Common.csproj", "{1864714C-0B7E-4788-A8C1-25B6B70A81A2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dReveal.Communication", "dReveal.Communication\dReveal.Communication.csproj", "{2648C887-AAC4-4DCB-9556-5C5AD7879394}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{E020301E-7245-4F5A-8478-1382AB97F92F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E020301E-7245-4F5A-8478-1382AB97F92F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E020301E-7245-4F5A-8478-1382AB97F92F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1864714C-0B7E-4788-A8C1-25B6B70A81A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1864714C-0B7E-4788-A8C1-25B6B70A81A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1864714C-0B7E-4788-A8C1-25B6B70A81A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1864714C-0B7E-4788-A8C1-25B6B70A81A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2648C887-AAC4-4DCB-9556-5C5AD7879394}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2648C887-AAC4-4DCB-9556-5C5AD7879394}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2648C887-AAC4-4DCB-9556-5C5AD7879394}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2648C887-AAC4-4DCB-9556-5C5AD7879394}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

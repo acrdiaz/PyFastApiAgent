@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using dReveal.Common;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -11,8 +12,8 @@ using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Office = Microsoft.Office.Core;
 
+using Office = Microsoft.Office.Core;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 
@@ -42,15 +43,11 @@ namespace dRevealAI
     {
         private Office.IRibbonUI ribbon;
 
-        //static string DR_API_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-        static string DR_API_PROMPT   = "http://127.0.0.1:8000/prompt/";
-        static string DR_API_RESPONSE = "http://127.0.0.1:8000/response/";
-        static string DR_API_CLEAR    = "http://127.0.0.1:8000/clearPromptResponse/";
-        static string DR_APIKEY = "";
-        static string DR_MODEL = "gpt-4o-mini";
+        private readonly AIServiceProvider _aiServiceProvider;
 
         public MyRibbon()
         {
+            _aiServiceProvider = new AIServiceProvider();
         }
 
         public async void MyButton_Click(Office.IRibbonControl control)
@@ -61,10 +58,11 @@ namespace dRevealAI
                 // Disable the button during operation
                 ribbon.InvalidateControl(control.Id);
 
-                await Add();
-
-                //MessageBox.Show("Operation completed successfully", "Success",
-                //    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Outlook.MailItem mailItem = GetSelectedMailItem();
+                if (mailItem != null)
+                {
+                    await ProcessEmailWithAI(mailItem);
+                }
             }
             catch (Exception ex)
             {
@@ -75,6 +73,53 @@ namespace dRevealAI
             {
                 // Re-enable the button
                 ribbon.InvalidateControl(control.Id);
+            }
+        }
+
+        private Outlook.MailItem GetSelectedMailItem()
+        {
+            try
+            {
+                Outlook.Inspector inspector = Globals.ThisAddIn.Application.ActiveInspector();
+                if (inspector?.CurrentItem is Outlook.MailItem mailItem)
+                {
+                    return mailItem;
+                }
+            }
+            catch { /* Ignore errors */ }
+
+            MessageBox.Show("Please open an email first", "No Email Selected",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return null;
+        }
+
+        private async Task ProcessEmailWithAI(Outlook.MailItem mailItem)
+        {
+            try
+            {
+                var aiService = _aiServiceProvider.GetDefaultService();
+                string emailContent = mailItem.Body;
+
+                // Show processing indicator
+                using (var progressForm = new Form { Text = "Processing...", Width = 300, Height = 100 })
+                {
+                    progressForm.Show();
+                    progressForm.Refresh();
+
+                    // Process with AI (async)
+                    string analysis = await aiService.AnalyzeContentAsync(emailContent);
+
+                    // Insert analysis at top of email
+                    mailItem.Body = $"AI ANALYSIS:\n{analysis}\n\n{emailContent}";
+                    mailItem.Save();
+
+                    progressForm.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"AI Processing Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

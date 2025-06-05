@@ -242,6 +242,12 @@
   <ItemGroup>
     <EmbeddedResource Include="MyRibbon.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\dReveal.Common\dReveal.Common.csproj">
+      <Project>{1864714C-0B7E-4788-A8C1-25B6B70A81A2}</Project>
+      <Name>dReveal.Common</Name>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

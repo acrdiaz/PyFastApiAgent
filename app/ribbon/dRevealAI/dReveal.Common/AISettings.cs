@@ -20,7 +20,7 @@ namespace dReveal.Common
         public static string DR_APIKEY = "";
         public const string DR_LLM_GPT = "gpt-4o-mini";
         public const string DR_LLM_GEMINI = "gemini-2.0-flash";
-        public static string DR_LLM_DEFAULT = DR_LLM_GEMINI;
+        public static string DR_LLM_DEFAULT = DR_LLM_GPT;
 
         static AISettings()
         {

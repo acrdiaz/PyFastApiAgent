@@ -50,7 +50,7 @@ namespace dRevealAI
             _aiServiceProvider = new AIServiceProvider();
         }
 
-        public async void MyButton_Click(Office.IRibbonControl control)
+        public async void GetGeneralSummary_ClickAsync(Office.IRibbonControl control)
         {
             //MessageBox.Show("Hi", "My Add-in", MessageBoxButtons.OK, MessageBoxIcon.Information);
             try
@@ -108,6 +108,7 @@ namespace dRevealAI
 
                     // Process with AI (async)
                     string analysis = await aiService.AnalyzeContentAsync(emailContent);
+                    //    return AnalyzeContentAsync(input).GetAwaiter().GetResult();
 
                     // Insert analysis at top of email
                     mailItem.Body = $"AI ANALYSIS:\n{analysis}\n\n{emailContent}";
@@ -189,33 +190,33 @@ namespace dRevealAI
         //}
         #endregion working
 
-        private static async Task Add()
-        {
-            try
-            {
-                var num1 = 5;
-                var num2 = 3;
+        //private static async Task Add()
+        //{
+        //    try
+        //    {
+        //        var num1 = 5;
+        //        var num2 = 3;
 
-                var requestData = new
-                {
-                    prompt = $"What is {num1} + {num2}?"
-                };
+        //        var requestData = new
+        //        {
+        //            prompt = $"What is {num1} + {num2}?"
+        //        };
 
-                string message = await ApiHelper.GetApiResponseWithPollingAsync(
-                    DR_API_PROMPT,
-                    DR_API_RESPONSE,
-                    DR_API_CLEAR,
-                    requestData);
+        //        string message = await ApiHelper.GetApiResponseWithPollingAsync(
+        //            DR_API_PROMPT,
+        //            DR_API_RESPONSE,
+        //            DR_API_CLEAR,
+        //            requestData);
 
-                MessageBox.Show("Generated text: " + message);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
-                               MessageBoxButtons.OK,
-                               MessageBoxIcon.Error);
-            }
-        }
+        //        MessageBox.Show("Generated text: " + message);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"Error: {ex.Message}", "Error",
+        //                       MessageBoxButtons.OK,
+        //                       MessageBoxIcon.Error);
+        //    }
+        //}
 
         #region delete
         //public async void GetInboxEmails_Click(Office.IRibbonControl control)
@@ -267,167 +268,167 @@ namespace dRevealAI
         //}
         #endregion
 
-        public async Task GetGeneralSummary_ClickAsync(Office.IRibbonControl control)
-        {
-            Outlook.Application outlookApp = null;
-            Outlook.NameSpace outlookNs = null;
-            Outlook.MAPIFolder emailFolder = null;
-            Outlook.Items emailItems = null;
+        //public async Task GetGeneralSummary_ClickAsync(Office.IRibbonControl control)
+        //{
+        //    Outlook.Application outlookApp = null;
+        //    Outlook.NameSpace outlookNs = null;
+        //    Outlook.MAPIFolder emailFolder = null;
+        //    Outlook.Items emailItems = null;
 
-            try
-            {
-                Outlook.OlDefaultFolders folderType = Outlook.OlDefaultFolders.olFolderDrafts;
-                outlookApp = new Outlook.Application();
-                outlookNs = outlookApp.GetNamespace("MAPI");
-                emailFolder = outlookNs.GetDefaultFolder(folderType);
-                emailItems = emailFolder.Items;
+        //    try
+        //    {
+        //        Outlook.OlDefaultFolders folderType = Outlook.OlDefaultFolders.olFolderDrafts;
+        //        outlookApp = new Outlook.Application();
+        //        outlookNs = outlookApp.GetNamespace("MAPI");
+        //        emailFolder = outlookNs.GetDefaultFolder(folderType);
+        //        emailItems = emailFolder.Items;
 
-                // Sort by received time (newest first)
-                emailItems.Sort("[ReceivedTime]", true);
+        //        // Sort by received time (newest first)
+        //        emailItems.Sort("[ReceivedTime]", true);
 
-                StringBuilder sb = new StringBuilder();
-                //sb.AppendLine("====================");
+        //        StringBuilder sb = new StringBuilder();
+        //        //sb.AppendLine("====================");
 
-                // Process items
-                foreach (object item in emailItems)
-                {
-                    if (item is Outlook.MailItem mail)
-                    {
-                        try
-                        {
-                            sb.AppendLine($"Email To: {mail.To}");
-                            sb.AppendLine($"Subject: {mail.Subject}");
-                            //sb.AppendLine($"...: {mail.RetentionExpirationDate}");
-                            //sb.AppendLine($"...: {mail.CreationTime}");
-                            //sb.AppendLine($"...: {mail.ReceivedTime}");
-                            sb.AppendLine($".\n");
-                        }
-                        finally
-                        {
-                            Marshal.ReleaseComObject(mail);
-                        }
-                    }
-                }
+        //        // Process items
+        //        foreach (object item in emailItems)
+        //        {
+        //            if (item is Outlook.MailItem mail)
+        //            {
+        //                try
+        //                {
+        //                    sb.AppendLine($"Email To: {mail.To}");
+        //                    sb.AppendLine($"Subject: {mail.Subject}");
+        //                    //sb.AppendLine($"...: {mail.RetentionExpirationDate}");
+        //                    //sb.AppendLine($"...: {mail.CreationTime}");
+        //                    //sb.AppendLine($"...: {mail.ReceivedTime}");
+        //                    sb.AppendLine($".\n");
+        //                }
+        //                finally
+        //                {
+        //                    Marshal.ReleaseComObject(mail);
+        //                }
+        //            }
+        //        }
 
-                await HandleGeneralEmail(sb.ToString());
-            }
-            catch (System.Exception ex)
-            {
-                MessageBox.Show($"Error accessing specified email folder: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                // Clean up COM objects in reverse order
-                if (emailItems != null) Marshal.ReleaseComObject(emailItems);
-                if (emailFolder != null) Marshal.ReleaseComObject(emailFolder);
-                if (outlookNs != null) Marshal.ReleaseComObject(outlookNs);
-                if (outlookApp != null) Marshal.ReleaseComObject(outlookApp);
-            }
-        }
+        //        await HandleGeneralEmail(sb.ToString());
+        //    }
+        //    catch (System.Exception ex)
+        //    {
+        //        MessageBox.Show($"Error accessing specified email folder: {ex.Message}", "Error",
+        //            MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //    }
+        //    finally
+        //    {
+        //        // Clean up COM objects in reverse order
+        //        if (emailItems != null) Marshal.ReleaseComObject(emailItems);
+        //        if (emailFolder != null) Marshal.ReleaseComObject(emailFolder);
+        //        if (outlookNs != null) Marshal.ReleaseComObject(outlookNs);
+        //        if (outlookApp != null) Marshal.ReleaseComObject(outlookApp);
+        //    }
+        //}
 
-        private static async Task HandleGeneralEmail(string EmailList)
-        {
-            try
-            {
-                var requestData = new
-                {
-                    prompt = $"Give a general summary of this email list, how many are from each person: {EmailList}?"
-                };
+        //private static async Task HandleGeneralEmail(string EmailList)
+        //{
+        //    try
+        //    {
+        //        var requestData = new
+        //        {
+        //            prompt = $"Give a general summary of this email list, how many are from each person: {EmailList}?"
+        //        };
 
-                string message = await ApiHelper.GetApiResponseWithPollingAsync(
-                    DR_API_PROMPT,
-                    DR_API_RESPONSE,
-                    DR_API_CLEAR,
-                    requestData);
+        //        string message = await ApiHelper.GetApiResponseWithPollingAsync(
+        //            DR_API_PROMPT,
+        //            DR_API_RESPONSE,
+        //            DR_API_CLEAR,
+        //            requestData);
 
-                MessageBox.Show(message);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
-                               MessageBoxButtons.OK,
-                               MessageBoxIcon.Error);
-            }
-        }
+        //        MessageBox.Show(message);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"Error: {ex.Message}", "Error",
+        //                       MessageBoxButtons.OK,
+        //                       MessageBoxIcon.Error);
+        //    }
+        //}
 
 
 
-        public async Task GetInboxEmails_ClickAsync(Office.IRibbonControl control)
-        {
-            Outlook.Application outlookApp = null;
-            Outlook.NameSpace outlookNs = null;
-            Outlook.MAPIFolder emailFolder = null;
-            Outlook.Items emailItems = null;
+        //public async Task GetInboxEmails_ClickAsync(Office.IRibbonControl control)
+        //{
+        //    Outlook.Application outlookApp = null;
+        //    Outlook.NameSpace outlookNs = null;
+        //    Outlook.MAPIFolder emailFolder = null;
+        //    Outlook.Items emailItems = null;
 
-            try
-            {
-                Outlook.OlDefaultFolders folderType = Outlook.OlDefaultFolders.olFolderDrafts;
-                outlookApp = new Outlook.Application();
-                outlookNs = outlookApp.GetNamespace("MAPI");
-                emailFolder = outlookNs.GetDefaultFolder(folderType);
-                emailItems = emailFolder.Items;
+        //    try
+        //    {
+        //        Outlook.OlDefaultFolders folderType = Outlook.OlDefaultFolders.olFolderDrafts;
+        //        outlookApp = new Outlook.Application();
+        //        outlookNs = outlookApp.GetNamespace("MAPI");
+        //        emailFolder = outlookNs.GetDefaultFolder(folderType);
+        //        emailItems = emailFolder.Items;
 
-                // Sort by received time (newest first)
-                emailItems.Sort("[ReceivedTime]", true);
+        //        // Sort by received time (newest first)
+        //        emailItems.Sort("[ReceivedTime]", true);
 
-                // Process items
-                foreach (object item in emailItems)
-                {
-                    if (item is Outlook.MailItem mail)
-                    {
-                        try
-                        {
-                            await HandleEmail(mail);
-                        }
-                        finally
-                        {
-                            Marshal.ReleaseComObject(mail);
-                        }
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                MessageBox.Show($"Error accessing specified email folder: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                // Clean up COM objects in reverse order
-                if (emailItems != null) Marshal.ReleaseComObject(emailItems);
-                if (emailFolder != null) Marshal.ReleaseComObject(emailFolder);
-                if (outlookNs != null) Marshal.ReleaseComObject(outlookNs);
-                if (outlookApp != null) Marshal.ReleaseComObject(outlookApp);
-            }
-        }
+        //        // Process items
+        //        foreach (object item in emailItems)
+        //        {
+        //            if (item is Outlook.MailItem mail)
+        //            {
+        //                try
+        //                {
+        //                    await HandleEmail(mail);
+        //                }
+        //                finally
+        //                {
+        //                    Marshal.ReleaseComObject(mail);
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (System.Exception ex)
+        //    {
+        //        MessageBox.Show($"Error accessing specified email folder: {ex.Message}", "Error",
+        //            MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //    }
+        //    finally
+        //    {
+        //        // Clean up COM objects in reverse order
+        //        if (emailItems != null) Marshal.ReleaseComObject(emailItems);
+        //        if (emailFolder != null) Marshal.ReleaseComObject(emailFolder);
+        //        if (outlookNs != null) Marshal.ReleaseComObject(outlookNs);
+        //        if (outlookApp != null) Marshal.ReleaseComObject(outlookApp);
+        //    }
+        //}
 
-        private static async Task HandleEmail(Outlook.MailItem mail)
-        {
-            try
-            {
-                string emailText = $"Subject: {mail.Subject}\n.EmailMessage: {mail.Body}";
+        //private static async Task HandleEmail(Outlook.MailItem mail)
+        //{
+        //    try
+        //    {
+        //        string emailText = $"Subject: {mail.Subject}\n.EmailMessage: {mail.Body}";
 
-                var requestData = new
-                {
-                    prompt = $"Summarize one sentence this email: {emailText}?"
-                };
+        //        var requestData = new
+        //        {
+        //            prompt = $"Summarize one sentence this email: {emailText}?"
+        //        };
 
-                string message = await ApiHelper.GetApiResponseWithPollingAsync(
-                    DR_API_PROMPT,
-                    DR_API_RESPONSE,
-                    DR_API_CLEAR,
-                    requestData);
+        //        string message = await ApiHelper.GetApiResponseWithPollingAsync(
+        //            DR_API_PROMPT,
+        //            DR_API_RESPONSE,
+        //            DR_API_CLEAR,
+        //            requestData);
 
-                HandleResponse(message, mail.Subject);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
-                               MessageBoxButtons.OK,
-                               MessageBoxIcon.Error);
-            }
-        }
+        //        HandleResponse(message, mail.Subject);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"Error: {ex.Message}", "Error",
+        //                       MessageBoxButtons.OK,
+        //                       MessageBoxIcon.Error);
+        //    }
+        //}
 
         private static void HandleResponse(string message, string subject)
         {

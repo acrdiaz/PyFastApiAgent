@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GenerativeAI;
+using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -22,7 +23,7 @@ namespace dReveal.Common
             {
                 var client = new GenerativeModel(
                     apiKey: _apiKey,
-                    model: AISettings.DR_LLM_GEMINI); // "gemini-2.0-flash"
+                    model: AISettings.DR_LLM_GEMINI);
 
                 _model = client;
             }

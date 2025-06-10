@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Resources;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Contexts;
 using System.Text;
@@ -19,7 +20,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace dRevealAI
 {
-    public enum DateRange { Today, Yesterday, ThisWeek }
+    public enum DateRange { Today, Yesterday, ThisWeek, PreviousSevenDays }
 
     [ComVisible(true)]
     public class MyRibbon : Office.IRibbonExtensibility
@@ -56,9 +57,9 @@ namespace dRevealAI
                     case "btnDraftEmail":
                         DraftResponse(mailItem);
                         break;
-                    case "btnListToday":
-                        ListTodaysEmails();
-                        break;
+                    //case "btnListToday":
+                    //    ListTodaysEmails();
+                    //    break;
                     //case "btnListEmails":
                     //    ListEmails_DateRange();
                     //    break;
@@ -106,6 +107,87 @@ $"Original email:\n\n{mailItem.Body}";
             newMail.Body = draft;
             newMail.Display();
         }
+
+        public async void ListEmails_Click(Office.IRibbonControl control)
+        {
+            DateRange dateRange;
+
+            // Explicit switch statement (more reliable in VSTO)
+            switch (_selectedDateRange)
+            {
+                case "Previous SevenDays":
+                    dateRange = DateRange.PreviousSevenDays;
+                    break;
+                case "Yesterday":
+                    dateRange = DateRange.Yesterday;
+                    break;
+                case "This Week":
+                    dateRange = DateRange.ThisWeek;
+                    break;
+                default: // "today" or any unexpected value
+                    dateRange = DateRange.Today;
+                    break;
+            }
+
+            await ListEmailsByDateRange(dateRange);
+        }
+
+        private async void ListTodaysEmails()
+        {
+            Outlook.MAPIFolder inbox = null;
+            try
+            {
+                Outlook.Application outlookApp = Globals.ThisAddIn.Application;
+                inbox = outlookApp.Session.GetDefaultFolder(
+                    Outlook.OlDefaultFolders.olFolderInbox);
+
+                DateTime today = DateTime.Today;
+                var todayEmails = inbox.Items
+                    .OfType<Outlook.MailItem>()
+                    .Where(mail => mail.ReceivedTime.Date == today)
+                    .OrderByDescending(mail => mail.ReceivedTime)
+                    .Take(50) // Limit to 50 most recent
+                    .ToList();
+
+                if (!todayEmails.Any())
+                {
+                    MessageBox.Show("No emails found for today.");
+                    return;
+                }
+
+                // Build formatted list
+                var sb = new StringBuilder();
+                sb.AppendLine($"📅 Emails Received Today ({today:d})");
+                sb.AppendLine("──────────────────────────────");
+
+                string summary = string.Empty;
+                string prompt = string.Empty;
+                foreach (var mail in todayEmails)
+                {
+                    sb.AppendLine($"• {mail.ReceivedTime:t} - {mail.SenderName}");
+                    sb.AppendLine($"  Subject: {mail.Subject}");
+                    prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
+                    summary = await ProcessWithAI(prompt);
+                    sb.AppendLine($"  Summary: {summary}");
+                    sb.AppendLine();
+                }
+
+                // Display in results window
+                ShowResult("Today's Emails", sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error listing emails: {ex.Message}");
+            }
+            finally
+            {
+                if (inbox != null)
+                {
+                    Marshal.ReleaseComObject(inbox);
+                }
+            }
+        }
+
         #endregion
 
         #region Helper Methods
@@ -145,7 +227,7 @@ $"Original email:\n\n{mailItem.Body}";
                 Width = 750,
                 Height = 550,
                 StartPosition = FormStartPosition.CenterScreen,
-                Font = new Font("Segoe UI", 10),
+                Font = new System.Drawing.Font("Segoe UI", 10),
                 //FormBorderStyle = FormBorderStyle.FixedDialog,
                 //MaximizeBox = false
             })
@@ -154,7 +236,7 @@ $"Original email:\n\n{mailItem.Body}";
                 {
                     Text = FormatAiResponse(content),
                     Dock = DockStyle.Fill,
-                    ReadOnly = true,
+                    ReadOnly = false,
                     BackColor = Color.White,
                     BorderStyle = BorderStyle.None,
                     Margin = new Padding(10),
@@ -166,9 +248,10 @@ $"Original email:\n\n{mailItem.Body}";
                     Text = "Copy to Clipboard",
                     Dock = DockStyle.Bottom,
                     Height = 40,
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    Font = new System.Drawing.Font("Segoe UI", 9, FontStyle.Bold),
                     BackColor = Color.LightGray,
                     Enabled = false,
+                    Visible = false,
                 };
                 btnCopy.Click += (s, e) => Clipboard.SetText(textBox.Text);
 
@@ -188,57 +271,6 @@ $"Original email:\n\n{mailItem.Body}";
                 .Replace("\n", "\n    "); // Indent replies
         }
 
-        private void ListTodaysEmails()
-        {
-            Outlook.MAPIFolder inbox = null;
-            try
-            {
-                Outlook.Application outlookApp = Globals.ThisAddIn.Application;
-                inbox = outlookApp.Session.GetDefaultFolder(
-                    Outlook.OlDefaultFolders.olFolderInbox);
-
-                DateTime today = DateTime.Today;
-                var todayEmails = inbox.Items
-                    .OfType<Outlook.MailItem>()
-                    .Where(mail => mail.ReceivedTime.Date == today)
-                    .OrderByDescending(mail => mail.ReceivedTime)
-                    .Take(50) // Limit to 50 most recent
-                    .ToList();
-
-                if (!todayEmails.Any())
-                {
-                    MessageBox.Show("No emails found for today.");
-                    return;
-                }
-
-                // Build formatted list
-                var sb = new StringBuilder();
-                sb.AppendLine($"📅 Emails Received Today ({today:d})");
-                sb.AppendLine("──────────────────────────────");
-
-                foreach (var mail in todayEmails)
-                {
-                    sb.AppendLine($"• {mail.ReceivedTime:t} - {mail.SenderName}");
-                    sb.AppendLine($"  Subject: {mail.Subject}");
-                    sb.AppendLine();
-                }
-
-                // Display in results window
-                ShowResult("Today's Emails", sb.ToString());
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error listing emails: {ex.Message}");
-            }
-            finally
-            {
-                if (inbox != null)
-                {
-                    Marshal.ReleaseComObject(inbox);
-                }
-            }
-        }
-
         // COMBOBOX HANDLERS
         public string GetSelectedDateRange(Office.IRibbonControl control)
         {
@@ -250,33 +282,8 @@ $"Original email:\n\n{mailItem.Body}";
             _selectedDateRange = selectedId;
         }
 
-        //ListEmails_DateRange
-        //public void ListEmails_DateRange()
-        public void ListEmails_Click(Office.IRibbonControl control)
+        private async Task ListEmailsByDateRange(DateRange range)
         {
-            DateRange dateRange;
-
-            // Explicit switch statement (more reliable in VSTO)
-            switch (_selectedDateRange)
-            {
-                case "Yesterday":
-                    dateRange = DateRange.Yesterday;
-                    break;
-                case "This Week":
-                    dateRange = DateRange.ThisWeek;
-                    break;
-                default: // "today" or any unexpected value
-                    dateRange = DateRange.Today;
-                    break;
-            }
-
-            ListEmailsByDateRange(dateRange);
-        }
-
-        private void ListEmailsByDateRange(DateRange range)
-        {
-            //Outlook.MAPIFolder folder = null;
-            //Outlook.Items items = null;
             Outlook.Application outlook = null;
             Outlook.MAPIFolder inbox = null;
 
@@ -294,7 +301,7 @@ $"Original email:\n\n{mailItem.Body}";
                     .Take(100)
                     .ToList();
 
-                ShowEmailList(emails, range);
+                await ShowEmailList(emails, range);
             }
             catch (Exception ex)
             {
@@ -302,8 +309,6 @@ $"Original email:\n\n{mailItem.Body}";
             }
             finally
             {
-                //if (inbox != null) Marshal.ReleaseComObject(inbox);
-                //if (outlook != null) Marshal.ReleaseComObject(outlook);
             }
         }
 
@@ -317,6 +322,8 @@ $"Original email:\n\n{mailItem.Body}";
                     return (end.AddDays(-1).Date, end.AddDays(-1));
                 case DateRange.ThisWeek:
                     return (end.AddDays(-(int)end.DayOfWeek).Date, end);
+                case DateRange.PreviousSevenDays:
+                    return (end.AddDays(-7).Date, end.AddDays(-1)); // From 7 days ago to yesterday
                 default: // Today
                     return (end.Date, end);
             }
@@ -328,17 +335,24 @@ $"Original email:\n\n{mailItem.Body}";
                    $"[ReceivedTime] <= '{end:MM/dd/yyyy HH:mm}'";
         }
 
-        private void ShowEmailList(List<Outlook.MailItem> emails, DateRange range)
+        private async Task ShowEmailList(List<Outlook.MailItem> emails, DateRange range)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"📅 {range.ToString()} Emails ({emails.Count})");
             sb.AppendLine("──────────────────────────────");
 
+            string prompt = string.Empty;
+            string summary = string.Empty;
             foreach (var mail in emails)
             {
                 sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt} - {mail.SenderName}");
                 sb.AppendLine($"  Subject: {mail.Subject}");
                 sb.AppendLine($"  {(mail.UnRead ? "🆕 UNREAD" : "✓ Read")}");
+                //prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
+                //summary = await ProcessWithAI(prompt);
+                //sb.AppendLine($"  Summary: {summary}");
+                //sb.AppendLine($"  Message: {mail.Body}");
+                //sb.AppendLine($"  Message: {mail.}"); // AA1 is it possible to remove hash?
                 sb.AppendLine();
             }
 
@@ -358,7 +372,7 @@ $"Original email:\n\n{mailItem.Body}";
                 return stream != null ? new Bitmap(stream) : null;
             }
         }
-        
+
         #endregion Image resource
 
         #region IRibbonExtensibility Members
@@ -376,6 +390,18 @@ $"Original email:\n\n{mailItem.Body}";
         public void Ribbon_Load(Office.IRibbonUI ribbonUI)
         {
             this.ribbon = ribbonUI;
+            //this.ribbon.Invalidate(); // Forces the ribbon to refresh
+        }
+
+        // AA1 this does not work
+        // Callback to get the selected item ID for cmbDateRange
+        public string GetSelectedItemID(Office.IRibbonControl control)
+        {
+            if (control.Id == "cmbDateRange")
+            {
+                return "today"; // Default value
+            }
+            return null;
         }
 
         #endregion

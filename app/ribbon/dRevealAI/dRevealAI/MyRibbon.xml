@@ -14,11 +14,12 @@
         <group id="groupTools" label="Date Filters">
           <comboBox id="cmbDateRange"
                    label="Date Range"
-
+                   getItemID="GetSelectedItemID"
                    onChange="OnDateRangeChanged">
             <item id="today" label="Today"/>
             <item id="yesterday" label="Yesterday"/>
             <item id="thisWeek" label="This Week"/>
+            <item id="previousSevenDays" label="Previous SevenDays"/>
           </comboBox>
           <button id="btnListEmails" label="List Emails"
                  onAction="ListEmails_Click" imageMso="ShowTimeSlots"/>

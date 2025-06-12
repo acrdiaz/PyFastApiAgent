@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,7 @@ using System.Resources;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Contexts;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -20,23 +22,50 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace dRevealAI
 {
-    public enum DateRange { Today, Yesterday, ThisWeek, PreviousSevenDays }
 
     [ComVisible(true)]
     public class MyRibbon : Office.IRibbonExtensibility
     {
-        private Office.IRibbonUI ribbon;
-        private string _selectedDateRange = "today"; // Default
 
+        #region Fields and Properties
+
+        private Office.IRibbonUI ribbon;
+        private string SelectedFilterDateRange { get; set; } = "today"; // Default
+        private string SelectedVIPDateRange { get; set; } = "today"; // Default
+        private string SelectedVIP { get; set; } = string.Empty;
+
+        public enum DateRange { Today, Yesterday, ThisWeek, PreviousSevenDays }
 
         //private readonly AIServiceProvider _aiServiceProvider;
         private readonly AIServiceProvider _aiService = new AIServiceProvider();
 
+        private List<string> _vipContacts = new List<string>
+        {
+            "john.doe@company.com",
+            "ceo@company.com",
+            "important.client@example.com",
+            "kabularach@info-arch.com",
+            "rcoronado@info-arch.com",
+            "cdiaz@info-arch.com",
+        };
+
+        // ComboBox callbacks
+        public int GetVIPContactCount(Office.IRibbonControl control) => _vipContacts.Count;
+        public string GetVIPContactLabel(Office.IRibbonControl control, int index) => _vipContacts[index];
+        public string GetSelectedVIP(Office.IRibbonControl control) => SelectedVIP;
+        public void OnVIPContactChanged(Office.IRibbonControl control, string selectedId)
+            => SelectedVIP = selectedId;
+
+        #endregion region Fields and Properties
+
+        #region Constructor
 
         public MyRibbon()
         {
             //_aiServiceProvider = new AIServiceProvider();
         }
+
+        #endregion Constructor
 
         #region Ribbon Handlers
         public void Button_Click(Office.IRibbonControl control)
@@ -60,9 +89,6 @@ namespace dRevealAI
                     //case "btnListToday":
                     //    ListTodaysEmails();
                     //    break;
-                    //case "btnListEmails":
-                    //    ListEmails_DateRange();
-                    //    break;
                 }
             }
             catch (Exception ex)
@@ -75,6 +101,7 @@ namespace dRevealAI
         #endregion
 
         #region Email Processing
+
         private async void SummarizeEmail(Outlook.MailItem mailItem)
         {
             string prompt = $"Summarize this email in 3 bullet points:\n\n{mailItem.Body}";
@@ -108,87 +135,63 @@ $"Original email:\n\n{mailItem.Body}";
             newMail.Display();
         }
 
-        public async void ListEmails_Click(Office.IRibbonControl control)
-        {
-            DateRange dateRange;
+        //private async void ListTodaysEmails()
+        //{
+        //    Outlook.MAPIFolder inbox = null;
+        //    try
+        //    {
+        //        Outlook.Application outlookApp = Globals.ThisAddIn.Application;
+        //        inbox = outlookApp.Session.GetDefaultFolder(
+        //            Outlook.OlDefaultFolders.olFolderInbox);
 
-            // Explicit switch statement (more reliable in VSTO)
-            switch (_selectedDateRange)
-            {
-                case "Previous SevenDays":
-                    dateRange = DateRange.PreviousSevenDays;
-                    break;
-                case "Yesterday":
-                    dateRange = DateRange.Yesterday;
-                    break;
-                case "This Week":
-                    dateRange = DateRange.ThisWeek;
-                    break;
-                default: // "today" or any unexpected value
-                    dateRange = DateRange.Today;
-                    break;
-            }
+        //        DateTime today = DateTime.Today;
+        //        var todayEmails = inbox.Items
+        //            .OfType<Outlook.MailItem>()
+        //            .Where(mail => mail.ReceivedTime.Date == today)
+        //            .OrderByDescending(mail => mail.ReceivedTime)
+        //            .Take(50) // Limit to 50 most recent
+        //            .ToList();
 
-            await ListEmailsByDateRange(dateRange);
-        }
+        //        if (!todayEmails.Any())
+        //        {
+        //            MessageBox.Show("No emails found for today.");
+        //            return;
+        //        }
 
-        private async void ListTodaysEmails()
-        {
-            Outlook.MAPIFolder inbox = null;
-            try
-            {
-                Outlook.Application outlookApp = Globals.ThisAddIn.Application;
-                inbox = outlookApp.Session.GetDefaultFolder(
-                    Outlook.OlDefaultFolders.olFolderInbox);
+        //        // Build formatted list
+        //        var sb = new StringBuilder();
+        //        sb.AppendLine($"📅 Emails Received Today ({today:d})");
+        //        sb.AppendLine("──────────────────────────────");
 
-                DateTime today = DateTime.Today;
-                var todayEmails = inbox.Items
-                    .OfType<Outlook.MailItem>()
-                    .Where(mail => mail.ReceivedTime.Date == today)
-                    .OrderByDescending(mail => mail.ReceivedTime)
-                    .Take(50) // Limit to 50 most recent
-                    .ToList();
+        //        string summary = string.Empty;
+        //        string prompt = string.Empty;
+        //        foreach (var mail in todayEmails)
+        //        {
+        //            sb.AppendLine($"• {mail.ReceivedTime:t} - {mail.SenderName}");
+        //            sb.AppendLine($"  Subject: {mail.Subject}");
+        //            prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
+        //            summary = await ProcessWithAI(prompt);
+        //            sb.AppendLine($"  Summary: {summary}");
+        //            sb.AppendLine();
+        //        }
 
-                if (!todayEmails.Any())
-                {
-                    MessageBox.Show("No emails found for today.");
-                    return;
-                }
+        //        // Display in results window
+        //        ShowResult("Today's Emails", sb.ToString());
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"Error listing emails: {ex.Message}");
+        //    }
+        //    finally
+        //    {
+        //        if (inbox != null)
+        //        {
+        //            Marshal.ReleaseComObject(inbox);
+        //        }
+        //    }
+        //}
 
-                // Build formatted list
-                var sb = new StringBuilder();
-                sb.AppendLine($"📅 Emails Received Today ({today:d})");
-                sb.AppendLine("──────────────────────────────");
-
-                string summary = string.Empty;
-                string prompt = string.Empty;
-                foreach (var mail in todayEmails)
-                {
-                    sb.AppendLine($"• {mail.ReceivedTime:t} - {mail.SenderName}");
-                    sb.AppendLine($"  Subject: {mail.Subject}");
-                    prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
-                    summary = await ProcessWithAI(prompt);
-                    sb.AppendLine($"  Summary: {summary}");
-                    sb.AppendLine();
-                }
-
-                // Display in results window
-                ShowResult("Today's Emails", sb.ToString());
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error listing emails: {ex.Message}");
-            }
-            finally
-            {
-                if (inbox != null)
-                {
-                    Marshal.ReleaseComObject(inbox);
-                }
-            }
-        }
-
-        #endregion
+        #endregion Email Processing
 
         #region Helper Methods
 
@@ -274,12 +277,136 @@ $"Original email:\n\n{mailItem.Body}";
         // COMBOBOX HANDLERS
         public string GetSelectedDateRange(Office.IRibbonControl control)
         {
-            return _selectedDateRange;
+            return SelectedFilterDateRange;
         }
 
-        public void OnDateRangeChanged(Office.IRibbonControl control, string selectedId)
+        public void OnFilterDateRangeChanged(Office.IRibbonControl control, string selectedId)
         {
-            _selectedDateRange = selectedId;
+            SelectedFilterDateRange = selectedId;
+        }
+
+        private (DateTime Start, DateTime End) GetDateRange(DateRange range)
+        {
+            DateTime end = DateTime.Today.AddDays(1).AddSeconds(-1);
+            
+            switch (range)
+            {
+                case DateRange.Yesterday:
+                    return (end.AddDays(-1).Date, end.AddDays(-1));
+                case DateRange.ThisWeek:
+                    return (end.AddDays(-(int)end.DayOfWeek).Date, end);
+                case DateRange.PreviousSevenDays:
+                    return (end.AddDays(-7).Date, end.AddDays(-1)); // From 7 days ago to yesterday
+                default: // Today
+                    return (end.Date, end);
+            }
+        }
+
+        private string CreateDateFilter(DateTime start, DateTime end, string additionalFilter = null)
+        {
+            return $"[ReceivedTime] >= '{start:MM/dd/yyyy HH:mm}' AND " +
+                   $"[ReceivedTime] <= '{end:MM/dd/yyyy HH:mm}'";
+        }
+
+        private string CreateVipDateFilter(DateTime start, DateTime end, string emailAddress)
+        {
+            //string filter = $"[SenderEmailAddress] = '{emailAddress}' AND " +
+            //               $"[ReceivedTime] >= '{DateTime.Today.AddDays(-7):MM/dd/yyyy}'";
+
+            //return $"[SenderEmailAddress] = '{emailAddress}' AND " + CreateDateFilter(start, end);
+            //return $"[SenderEmailAddress] = '{emailAddress}'";
+            //return $"[SenderEmailAddress] like '{emailAddress}'";
+            return $"[SenderEmailAddress] = '{emailAddress}'";
+        }
+
+        //private async Task ShowEmailList(List<Outlook.MailItem> emails, DateRange range)
+        //{
+        //    var sb = new StringBuilder();
+        //    sb.AppendLine($"📅 {range.ToString()} Emails ({emails.Count})");
+        //    sb.AppendLine("──────────────────────────────");
+
+        //    string prompt = string.Empty;
+        //    string summary = string.Empty;
+        //    foreach (var mail in emails)
+        //    {
+        //        // Sanitize the body content
+        //        string cleanBody = SanitizeEmailBody(mail.Body);
+
+        //        sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt} - {mail.SenderName}");
+        //        sb.AppendLine($"  Subject: {mail.Subject}");
+        //        sb.AppendLine($"  {(mail.UnRead ? "🆕 UNREAD" : "✓ Read")}");
+
+        //        if (!string.IsNullOrEmpty(cleanBody))
+        //        {
+        //            sb.AppendLine($"  Preview: {Truncate(cleanBody, 200)}"); // Show first 200 chars
+        //        }
+
+        //        //prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
+        //        //summary = await ProcessWithAI(prompt);
+        //        //sb.AppendLine($"  Summary: {summary}");
+        //        //sb.AppendLine($"  Message: {mail.Body}");
+        //        //sb.AppendLine($"  Message: {mail.}"); // AA1 is it possible to remove hash?
+        //        //mail.BodyFormat
+        //        //mail.HTMLBody
+        //        //mail.RTFBody
+
+        //        sb.AppendLine();
+        //    }
+
+        //    ShowResult("Email List", sb.ToString());
+        //}
+
+        private string SanitizeEmailBody(string body)
+        {
+            if (string.IsNullOrEmpty(body))
+                return string.Empty;
+
+            // 1. Remove long hex hashes (e.g., 32+ character strings)
+            body = Regex.Replace(body, @"\b[0-9a-fA-F]{32,}\b", "[HASH]");
+
+            // 2. Remove base64-looking strings
+            body = Regex.Replace(body, @"\b[A-Za-z0-9+/=]{40,}\b", "[BASE64]");
+
+            // 3. Remove HTML tags if present
+            body = Regex.Replace(body, "<[^>]*>", string.Empty);
+
+            // 4. Normalize whitespace
+            body = Regex.Replace(body, @"\s+", " ").Trim();
+
+            return body;
+        }
+
+        private string Truncate(string value, int maxLength)
+        {
+            return value.Length <= maxLength ?
+                value :
+                value.Substring(0, maxLength) + "...";
+        }
+
+        #endregion Helper Methods
+
+        #region Date Filter
+
+        public async void FilterListEmails_Click(Office.IRibbonControl control)
+        {
+            DateRange dateRange;
+            switch (SelectedFilterDateRange)
+            {
+                case "Previous Seven Days":
+                    dateRange = DateRange.PreviousSevenDays;
+                    break;
+                case "Yesterday":
+                    dateRange = DateRange.Yesterday;
+                    break;
+                case "This Week":
+                    dateRange = DateRange.ThisWeek;
+                    break;
+                default: // "today" or any unexpected value
+                    dateRange = DateRange.Today;
+                    break;
+            }
+
+            await ListEmailsByDateRange(dateRange);
         }
 
         private async Task ListEmailsByDateRange(DateRange range)
@@ -290,8 +417,9 @@ $"Original email:\n\n{mailItem.Body}";
             try
             {
                 outlook = Globals.ThisAddIn.Application;
-                inbox = outlook.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox);
-                
+                inbox = outlook.Session.GetDefaultFolder(
+                    Outlook.OlDefaultFolders.olFolderInbox);
+
                 var (startDate, endDate) = GetDateRange(range);
                 string filter = CreateDateFilter(startDate, endDate);
 
@@ -312,54 +440,173 @@ $"Original email:\n\n{mailItem.Body}";
             }
         }
 
-        private (DateTime Start, DateTime End) GetDateRange(DateRange range)
-        {
-            DateTime end = DateTime.Today.AddDays(1).AddSeconds(-1);
-            
-            switch (range)
-            {
-                case DateRange.Yesterday:
-                    return (end.AddDays(-1).Date, end.AddDays(-1));
-                case DateRange.ThisWeek:
-                    return (end.AddDays(-(int)end.DayOfWeek).Date, end);
-                case DateRange.PreviousSevenDays:
-                    return (end.AddDays(-7).Date, end.AddDays(-1)); // From 7 days ago to yesterday
-                default: // Today
-                    return (end.Date, end);
-            }
-        }
-
-        private string CreateDateFilter(DateTime start, DateTime end)
-        {
-            return $"[ReceivedTime] >= '{start:MM/dd/yyyy HH:mm}' AND " +
-                   $"[ReceivedTime] <= '{end:MM/dd/yyyy HH:mm}'";
-        }
-
         private async Task ShowEmailList(List<Outlook.MailItem> emails, DateRange range)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"📅 {range.ToString()} Emails ({emails.Count})");
+            sb.AppendLine($"📅 {range} Emails ({emails.Count})");
             sb.AppendLine("──────────────────────────────");
 
-            string prompt = string.Empty;
-            string summary = string.Empty;
-            foreach (var mail in emails)
+            // Process emails in parallel with throttling
+            var options = new ParallelOptions { MaxDegreeOfParallelism = 3 };
+            var emailTasks = emails.Select(async mail =>
+            {
+                try
+                {
+                    var cleanBody = SanitizeEmailBody(mail.Body);
+                    if (string.IsNullOrWhiteSpace(cleanBody))
+                        return (mail, null);
+
+                    // Get AI summary
+                    string prompt = $"Summarize this email in 1-2 sentences. Focus on actions needed and key points:\n\n{cleanBody}";
+                    //string summary = await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
+                    string summary = await ProcessWithAI(prompt);
+
+                    return (mail, summary);
+                }
+                catch
+                {
+                    return (mail, null); // Fallback if summary fails
+                }
+            });
+
+            var summarizedEmails = await Task.WhenAll(emailTasks);
+
+            foreach (var (mail, summary) in summarizedEmails)
             {
                 sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt} - {mail.SenderName}");
                 sb.AppendLine($"  Subject: {mail.Subject}");
                 sb.AppendLine($"  {(mail.UnRead ? "🆕 UNREAD" : "✓ Read")}");
-                //prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
-                //summary = await ProcessWithAI(prompt);
-                //sb.AppendLine($"  Summary: {summary}");
-                //sb.AppendLine($"  Message: {mail.Body}");
-                //sb.AppendLine($"  Message: {mail.}"); // AA1 is it possible to remove hash?
+
+                if (!string.IsNullOrEmpty(summary))
+                {
+                    sb.AppendLine($"  Summary: {summary}");
+                }
+                else
+                {
+                    sb.AppendLine($"  Preview: {Truncate(SanitizeEmailBody(mail.Body), 100)}");
+                }
+
                 sb.AppendLine();
             }
 
             ShowResult("Email List", sb.ToString());
         }
 
-        #endregion Helper Methods
+        #endregion Date Filter
+
+        #region VIP emails
+
+        public async void CheckVIPEmails_Click(Office.IRibbonControl control)
+        {
+            if (string.IsNullOrEmpty(SelectedVIP))
+            {
+                MessageBox.Show("Please select a VIP contact first");
+                return;
+            }
+
+            DateRange dateRange;
+            switch (SelectedVIPDateRange)
+            {
+                case "Previous Seven Days":
+                    dateRange = DateRange.PreviousSevenDays;
+                    break;
+                case "Yesterday":
+                    dateRange = DateRange.Yesterday;
+                    break;
+                case "This Week":
+                    dateRange = DateRange.ThisWeek;
+                    break;
+                default: // "today" or any unexpected value
+                    dateRange = DateRange.Today;
+                    break;
+            }
+
+            try
+            {
+                var emails = await GetEmailsFromVIP(SelectedVIP, dateRange);
+                await ShowVIPEmailList(emails, SelectedVIP);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error checking VIP emails: {ex.Message}");
+            }
+        }
+
+        // OnVIPDateRangeChanged
+        public void OnVIPDateRangeChanged(Office.IRibbonControl control, string selectedId)
+        {
+            SelectedVIPDateRange = selectedId;
+        }
+
+        private async Task<List<Outlook.MailItem>> GetEmailsFromVIP(
+            string emailAddress, 
+            DateRange range)
+        {
+            return await Task.Run(() =>
+            {
+                Outlook.Application outlook = Globals.ThisAddIn.Application;
+                Outlook.MAPIFolder inbox = outlook.Session.GetDefaultFolder(
+                    Outlook.OlDefaultFolders.olFolderInbox);
+
+                //--
+                //foreach (var item in inbox.Items.OfType<Outlook.MailItem>().Take(50))
+                //{
+                //    var mail = item as Outlook.MailItem;
+                //    if (mail != null)
+                //    {
+                //        Trace.WriteLine($"From: {mail.SenderEmailAddress} | Subject: {mail.Subject}");
+                //    }
+                //}
+
+                // DateRange range = DateRange.ThisWeek;
+                var (startDate, endDate) = GetDateRange(range);
+                //string filter = CreateVipDateFilter(startDate, endDate, emailAddress);
+                string filter = CreateDateFilter(startDate, endDate);
+
+                var emails = inbox.Items.Restrict(filter)
+                    .OfType<Outlook.MailItem>()
+                    .OrderByDescending(m => m.ReceivedTime)
+                    .Take(50) // Limit results
+                    .ToList();
+
+                Marshal.ReleaseComObject(inbox); // AA1 is this necessary?
+                return emails;
+            });
+        }
+
+        private async Task ShowVIPEmailList(List<Outlook.MailItem> emails, string vipEmail)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"⭐ VIP Emails From: {vipEmail}");
+            sb.AppendLine($"📅 Last ? Days ({emails.Count} emails)");
+            sb.AppendLine("──────────────────────────────");
+
+            foreach (var mail in emails)
+            {
+                //string summary = await GetEmailSummary(mail);
+
+                sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt}");
+                sb.AppendLine($"  Sender: {mail.Sender}");
+                sb.AppendLine($"  SenderEmailAddress: {mail.SenderEmailAddress}");
+                sb.AppendLine($"  SenderName: {mail.SenderName}");
+                sb.AppendLine($"  Subject: {mail.Subject}");
+                sb.AppendLine($"  Status: {(mail.UnRead ? "UNREAD" : "Read")}");
+                //sb.AppendLine($"  Summary: {summary}"); AA1 enable this
+                sb.AppendLine($"  Importance: {mail.Importance.ToString().ToUpper()}");
+                sb.AppendLine();
+            }
+
+            ShowResult($"VIP Emails from {vipEmail}", sb.ToString());
+        }
+
+        private async Task<string> GetEmailSummary(Outlook.MailItem mail)
+        {
+            var cleanBody = SanitizeEmailBody(mail.Body);
+            string prompt = $"Concise summary focusing on actions and deadlines:\n{cleanBody}";
+            return await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
+        }
+
+        #endregion VIP emails
 
 
         #region Images resource
@@ -393,16 +640,16 @@ $"Original email:\n\n{mailItem.Body}";
             //this.ribbon.Invalidate(); // Forces the ribbon to refresh
         }
 
-        // AA1 this does not work
-        // Callback to get the selected item ID for cmbDateRange
-        public string GetSelectedItemID(Office.IRibbonControl control)
-        {
-            if (control.Id == "cmbDateRange")
-            {
-                return "today"; // Default value
-            }
-            return null;
-        }
+        //// AA1 this does not work
+        //// Callback to get the selected item ID for cmbFilterDateRange
+        //public string GetSelectedItemID(Office.IRibbonControl control)
+        //{
+        //    if (control.Id == "cmbFilterDateRange")
+        //    {
+        //        return "today"; // Default value
+        //    }
+        //    return null;
+        //}
 
         #endregion
 

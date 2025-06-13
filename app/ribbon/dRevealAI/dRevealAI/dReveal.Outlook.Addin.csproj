@@ -207,6 +207,7 @@
     <Compile Include="EmailListForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="EmailWithSummary.cs" />
     <Compile Include="MyRibbon.cs" />
     <Compile Include="OutlookClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">

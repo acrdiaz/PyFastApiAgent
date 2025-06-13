@@ -775,26 +775,26 @@ $"Original email:\n\n{mailItem.Body}";
                 return;
             }
 
-            var sb = new StringBuilder();
-            sb.AppendLine($"⭐ VIP Emails From: {vipEmail}");
-            sb.AppendLine($"📅 {range} Emails ({emails.Count})");
-            sb.AppendLine("──────────────────────────────");
+            //var sb = new StringBuilder();
+            //sb.AppendLine($"⭐ VIP Emails From: {vipEmail}");
+            //sb.AppendLine($"📅 {range} Emails ({emails.Count})");
+            //sb.AppendLine("──────────────────────────────");
 
-            foreach (var mail in emails)
-            {
-                //string summary = await GetEmailSummary(mail); AA1 enable this
-                string summary = string.Empty;
+            //foreach (var mail in emails)
+            //{
+            //    //string summary = await GetEmailSummary(mail); AA1 enable this
+            //    string summary = string.Empty;
 
-                sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt}");
-                sb.AppendLine($"  SenderName: {mail.SenderName}");
-                sb.AppendLine($"  Subject: {mail.Subject}");
-                sb.AppendLine($"  Status: {(mail.UnRead ? "UNREAD" : "Read")}");
-                sb.AppendLine($"  Importance: {mail.Importance.ToString().ToUpper()}");
-                sb.AppendLine($"  Summary: {summary}");
-                //sb.AppendLine($"  ID: {mail.ConversationID}"); // Implement "conversation view"
-                //sb.AppendLine($"  ID: {mail.EntryID}"); // Track a specific email
-                sb.AppendLine();
-            }
+            //    sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt}");
+            //    sb.AppendLine($"  SenderName: {mail.SenderName}");
+            //    sb.AppendLine($"  Subject: {mail.Subject}");
+            //    sb.AppendLine($"  Status: {(mail.UnRead ? "UNREAD" : "Read")}");
+            //    sb.AppendLine($"  Importance: {mail.Importance.ToString().ToUpper()}");
+            //    sb.AppendLine($"  Summary: {summary}");
+            //    //sb.AppendLine($"  ID: {mail.ConversationID}"); // Implement "conversation view"
+            //    //sb.AppendLine($"  ID: {mail.EntryID}"); // Track a specific email
+            //    sb.AppendLine();
+            //}
 
             // Pass both the text and the list of emails
             //ShowResult($"VIP Emails from {vipEmail}", sb.ToString(), emails);
@@ -803,12 +803,30 @@ $"Original email:\n\n{mailItem.Body}";
             //ShowEmailListWeb(emails);
             //await ShowEmailListWebView2(emails);
 
+
+            //var emailsWithSummaries = await Task.WhenAll(emails.Select(async mail =>
+            //new {
+            //    Mail = mail,
+            //    Summary = await GetEmailSummary(mail)
+            //}));
+
+            var emailsWithSummaries = await Task.WhenAll(
+                emails.Select(async mail => new EmailWithSummary
+                {
+                    Mail = mail,
+                    Summary = await GetEmailSummary(mail)
+                })
+            );
+
+
             await Task.Run(() =>
             {
                 var thread = new Thread(() =>
                 {
                     Application.EnableVisualStyles();
-                    var form = new EmailListForm(emails);
+                    //var form = new EmailListForm(emails);
+                    var form = new EmailListForm(emailsWithSummaries.ToList());
+                    //List<(Outlook.MailItem Mail, string Summary)>
                     Application.Run(form);
                 });
                 thread.SetApartmentState(ApartmentState.STA);
@@ -974,8 +992,56 @@ $"Original email:\n\n{mailItem.Body}";
         private async Task<string> GetEmailSummary(Outlook.MailItem mail)
         {
             var cleanBody = SanitizeEmailBody(mail.Body);
-            string prompt = $"Concise summary focusing on actions and deadlines:\n{cleanBody}";
-            return await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
+            //Return ONLY this exact HTML format (no other text/comments):
+            //string prompt = $"Return ONLY this exact <div> (no other text/comments/wrappers): Concise summary focusing on actions and deadlines:\n{cleanBody}";
+            //string prompt = $"Return ONLY the exact original <div> don´t add markdown comments, exclude signature at email footer: Concise summary focusing on actions and deadlines:\n{cleanBody}";
+            string prompt = $"Return html <div> snippet. Concise summary in 2 lines focusing on actions and deadlines:\n{cleanBody}";
+
+//            string prompt = $@"
+//In html format only the <div> part, exclude the <html>, <head>
+//Create two summaries for this email:
+
+//🚀 QUICK ACTION SUMMARY (1 line):
+//- Only critical actions/deadlines
+//- Format: [emoji] [action] [deadline]
+
+//📌 DETAILED SUMMARY (2 lines):
+//- Context + actions + owners
+//- Format: • [Point 1]
+//         • [Point 2]
+
+//Content:
+//{cleanBody}";
+
+//            string prompt = $@"
+//Return ONLY the following HTML div (no <html>/<head>/<body>):
+//<div>
+// <b>🚀 [One-line action]</b><br>
+// • [Point 1]<br>
+// • [Point 2]
+//</div>
+
+//For email:
+//{cleanBody}";
+            //return await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
+            string result = await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
+            string resultA = RemoveMarkdownCodeBlocks(result);
+            return resultA;
+        }
+
+        public static string RemoveMarkdownCodeBlocks(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return input;
+
+            // Pattern matches:
+            // 1. Optional whitespace
+            // 2. ``` followed by optional "html"
+            // 3. Optional whitespace
+            string pattern = @"(?:\s*```(?:html)?\s*)|(?:\s*```\s*$)";
+
+            return Regex.Replace(input, pattern, "",
+                   RegexOptions.Multiline | RegexOptions.IgnoreCase).Trim();
         }
 
         #endregion VIP emails

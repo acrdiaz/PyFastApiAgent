@@ -8,18 +8,21 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using Microsoft.Web.WebView2.WinForms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace dRevealAI
 {
     public class EmailListForm : Form
     {
-        private readonly List<Outlook.MailItem> _emails;
+        //private readonly List<Outlook.MailItem> _emails;
+        private readonly List<EmailWithSummary> _emails;
         private WebView2 webView; // Add this field
 
-        public EmailListForm(List<Outlook.MailItem> emails)
+        //public EmailListForm(List<Outlook.MailItem> emails)
+        public EmailListForm(List<EmailWithSummary> emailsWithSummaries)
         {
-            _emails = emails;
+            _emails = emailsWithSummaries;
             InitializeComponent();
         }
 
@@ -54,7 +57,9 @@ namespace dRevealAI
             }
         }
 
-        private string GenerateEmailHtml(List<Outlook.MailItem> emails)
+        //private string GenerateEmailHtml(List<Outlook.MailItem> emails)
+        //private string GenerateEmailHtml(List<(Outlook.MailItem Mail, string Summary)> emails)
+        private string GenerateEmailHtml(List<EmailWithSummary> emails)
         {
             var sb = new StringBuilder();
             sb.Append(@"<!DOCTYPE html>
@@ -86,15 +91,16 @@ namespace dRevealAI
             foreach (var mail in emails)
             {
                 sb.Append($@"
-        <div class='email {(mail.UnRead ? "unread" : "")}'>
-            <div><strong>📅</strong> {mail.ReceivedTime:MMM d, yyyy h:mm tt}</div>
-            <div><strong>📩</strong> From: {mail.SenderName}</div>
-            <div><strong>🔖</strong> Subject: {mail.Subject}</div>
+        <div class='email {(mail.Mail.UnRead ? "unread" : "")}'>
+            <div><strong>📅</strong> {mail.Mail.ReceivedTime:MMM d, yyyy h:mm tt}</div>
+            <div><strong>📩</strong> From: {mail.Mail.SenderName}</div>
+            <div><strong>🔖</strong> Subject: {mail.Mail.Subject}</div>
+            <div><strong>{GetSummaryEmoji(mail.Summary)}</strong> Summary: {mail.Summary}</div>
             <div style='margin-top:10px;'>
-                <button class='btn btn-open' onclick='window.chrome.webview.postMessage(`open:{mail.EntryID}`)'>
+                <button class='btn btn-open' onclick='window.chrome.webview.postMessage(`open:{mail.Mail.EntryID}`)'>
                     Open
                 </button>
-                <button class='btn btn-reply' onclick='window.chrome.webview.postMessage(`reply:{mail.EntryID}`)'>
+                <button class='btn btn-reply' onclick='window.chrome.webview.postMessage(`reply:{mail.Mail.EntryID}`)'>
                     Reply
                 </button>
             </div>
@@ -103,6 +109,14 @@ namespace dRevealAI
 
             sb.Append("</body></html>");
             return sb.ToString();
+        }
+
+        string GetSummaryEmoji(string summary)
+        {
+            if (summary.Contains("!")) return "❗";
+            if (summary.Contains("action")) return "🎯";
+            if (summary.Length < 100) return "💡";
+            return "📝";
         }
 
         private void SetupWebViewHandlers()

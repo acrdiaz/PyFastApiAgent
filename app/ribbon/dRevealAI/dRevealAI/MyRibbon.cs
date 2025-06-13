@@ -68,6 +68,7 @@ namespace dRevealAI
         #endregion Constructor
 
         #region Ribbon Handlers
+
         public void Button_Click(Office.IRibbonControl control)
         {
             var mailItem = GetSelectedMailItem();
@@ -98,7 +99,7 @@ namespace dRevealAI
             }
         }
 
-        #endregion
+        #endregion Ribbon Handlers
 
         #region Email Processing
 
@@ -524,7 +525,7 @@ $"Original email:\n\n{mailItem.Body}";
             try
             {
                 var emails = await GetEmailsFromVIP(SelectedVIP, dateRange);
-                await ShowVIPEmailList(emails, SelectedVIP);
+                await ShowVIPEmailList(emails, SelectedVIP, dateRange);
             }
             catch (Exception ex)
             {
@@ -558,41 +559,83 @@ $"Original email:\n\n{mailItem.Body}";
                 //    }
                 //}
 
-                // DateRange range = DateRange.ThisWeek;
-                var (startDate, endDate) = GetDateRange(range);
                 //string filter = CreateVipDateFilter(startDate, endDate, emailAddress);
-                string filter = CreateDateFilter(startDate, endDate);
 
+                var (startDate, endDate) = GetDateRange(range);
+                string filter = CreateDateFilter(startDate, endDate);
                 var emails = inbox.Items.Restrict(filter)
                     .OfType<Outlook.MailItem>()
                     .OrderByDescending(m => m.ReceivedTime)
                     .Take(50) // Limit results
                     .ToList();
 
+                var result = new List<Outlook.MailItem>();
+                foreach (var item in emails)
+                {
+                    var mail = item as Outlook.MailItem;
+                    if (mail != null)
+                    {
+                        string smtpAddress = GetSmtpAddress(mail);
+                        if (smtpAddress == emailAddress)
+                        {
+                            result.Add(mail);
+                        }
+                    }
+                }
+
                 Marshal.ReleaseComObject(inbox); // AA1 is this necessary?
-                return emails;
+                return result;
             });
         }
 
-        private async Task ShowVIPEmailList(List<Outlook.MailItem> emails, string vipEmail)
+        private string GetSmtpAddress(Outlook.MailItem mailItem)
+        {
+            if (mailItem == null)
+                throw new ArgumentNullException(nameof(mailItem));
+
+            try
+            {
+                // If it's an Exchange user, resolve the SMTP address
+                if (mailItem.SenderEmailType == "EX")
+                {
+                    var sender = mailItem.Sender;
+                    if (sender != null)
+                    {
+                        const string PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E";
+                        return sender.PropertyAccessor.GetProperty(PR_SMTP_ADDRESS) as string;
+                    }
+                }
+                else
+                {
+                    // Regular SMTP sender
+                    return mailItem.SenderEmailAddress;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error resolving SMTP address: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private async Task ShowVIPEmailList(List<Outlook.MailItem> emails, string vipEmail, DateRange range)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"⭐ VIP Emails From: {vipEmail}");
-            sb.AppendLine($"📅 Last ? Days ({emails.Count} emails)");
+            sb.AppendLine($"📅 {range} Emails ({emails.Count})");
             sb.AppendLine("──────────────────────────────");
 
             foreach (var mail in emails)
             {
-                //string summary = await GetEmailSummary(mail);
+                string summary = await GetEmailSummary(mail);
 
                 sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt}");
-                sb.AppendLine($"  Sender: {mail.Sender}");
-                sb.AppendLine($"  SenderEmailAddress: {mail.SenderEmailAddress}");
                 sb.AppendLine($"  SenderName: {mail.SenderName}");
                 sb.AppendLine($"  Subject: {mail.Subject}");
                 sb.AppendLine($"  Status: {(mail.UnRead ? "UNREAD" : "Read")}");
-                //sb.AppendLine($"  Summary: {summary}"); AA1 enable this
                 sb.AppendLine($"  Importance: {mail.Importance.ToString().ToUpper()}");
+                sb.AppendLine($"  Summary: {summary}");
                 sb.AppendLine();
             }
 

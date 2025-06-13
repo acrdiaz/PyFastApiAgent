@@ -204,11 +204,11 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="EmailListForm.cs">
+    <Compile Include="EmailListDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="EmailWithSummary.cs" />
-    <Compile Include="MyRibbon.cs" />
+    <Compile Include="MainRibbon.cs" />
     <Compile Include="OutlookClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>

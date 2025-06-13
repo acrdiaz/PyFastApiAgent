@@ -1,64 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using Microsoft.Web.WebView2.WinForms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace dRevealAI
 {
-    public class EmailListForm : Form
+    public class EmailListDialog : Form
     {
-        //private readonly List<Outlook.MailItem> _emails;
-        private readonly List<EmailWithSummary> _emails;
-        private WebView2 webView; // Add this field
 
-        //public EmailListForm(List<Outlook.MailItem> emails)
-        public EmailListForm(List<EmailWithSummary> emailsWithSummaries)
+        #region Fields and properties
+
+        private readonly List<EmailWithSummary> _emails;
+        private WebView2 webView;
+
+        #endregion Fields and properties
+
+        #region Constructor
+        
+        public EmailListDialog(List<EmailWithSummary> emailsWithSummaries)
         {
             _emails = emailsWithSummaries;
             InitializeComponent();
         }
 
-        private async void InitializeComponent()
-        {
-            this.Text = "VIP Emails";
-            this.Width = 700;
-            this.Height = 650;
-            this.StartPosition = FormStartPosition.CenterScreen;
+        #endregion Constructor
 
-            webView = new WebView2
-            {
-                Dock = DockStyle.Fill,
-                CreationProperties = new CoreWebView2CreationProperties
-                {
-                    UserDataFolder = Path.Combine(Path.GetTempPath(), "WebView2Cache")
-                }
-            };
-            this.Controls.Add(webView);
+        #region HTML handler
 
-            try
-            {
-                await webView.EnsureCoreWebView2Async();
-                webView.CoreWebView2.NavigateToString(GenerateEmailHtml(_emails));
-
-                SetupWebViewHandlers();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"WebView2 initialization failed: {ex.Message}");
-                this.Close();
-            }
-        }
-
-        //private string GenerateEmailHtml(List<Outlook.MailItem> emails)
-        //private string GenerateEmailHtml(List<(Outlook.MailItem Mail, string Summary)> emails)
         private string GenerateEmailHtml(List<EmailWithSummary> emails)
         {
             var sb = new StringBuilder();
@@ -111,14 +84,6 @@ namespace dRevealAI
             return sb.ToString();
         }
 
-        string GetSummaryEmoji(string summary)
-        {
-            if (summary.Contains("!")) return "❗";
-            if (summary.Contains("action")) return "🎯";
-            if (summary.Length < 100) return "💡";
-            return "📝";
-        }
-
         private void SetupWebViewHandlers()
         {
             try
@@ -163,6 +128,41 @@ namespace dRevealAI
             }
         }
 
+        #endregion HTML handler
+
+        #region Helpers
+
+        private async void InitializeComponent()
+        {
+            this.Text = "VIP Emails";
+            this.Width = 700;
+            this.Height = 650;
+            this.StartPosition = FormStartPosition.CenterScreen;
+
+            webView = new WebView2
+            {
+                Dock = DockStyle.Fill,
+                CreationProperties = new CoreWebView2CreationProperties
+                {
+                    UserDataFolder = Path.Combine(Path.GetTempPath(), "WebView2Cache")
+                }
+            };
+            this.Controls.Add(webView);
+
+            try
+            {
+                await webView.EnsureCoreWebView2Async();
+                webView.CoreWebView2.NavigateToString(GenerateEmailHtml(_emails));
+
+                SetupWebViewHandlers();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"WebView2 initialization failed: {ex.Message}");
+                this.Close();
+            }
+        }
+
         private void ReplyToEmail(string entryId)
         {
             Outlook.Application outlookApp = null;
@@ -190,7 +190,6 @@ namespace dRevealAI
             }
         }
 
-
         private void OpenEmail(string entryId)
         {
             Outlook.Application outlookApp = null;
@@ -213,5 +212,17 @@ namespace dRevealAI
                 if (outlookApp != null) Marshal.ReleaseComObject(outlookApp);
             }
         }
+
+
+        string GetSummaryEmoji(string summary)
+        {
+            if (summary.Contains("!")) return "❗";
+            if (summary.Contains("action")) return "🎯";
+            if (summary.Length < 100) return "💡";
+            return "📝";
+        }
+
+        #endregion Helpers
+
     }
 }

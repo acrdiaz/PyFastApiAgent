@@ -12,7 +12,7 @@ namespace dRevealAI
     public partial class ThisAddIn
     {
 
-        private MyRibbon myRibbon;
+        private MainRibbon myRibbon;
 
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
@@ -29,7 +29,7 @@ namespace dRevealAI
         {
             FeedbackLogger.AnalyzeFeedback();
 
-            myRibbon = new MyRibbon();
+            myRibbon = new MainRibbon();
             return myRibbon;
         }
 

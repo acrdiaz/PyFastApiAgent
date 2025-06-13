@@ -26,8 +26,20 @@ namespace dRevealAI
 {
 
     [ComVisible(true)]
-    public class MyRibbon : Office.IRibbonExtensibility
+    public class MainRibbon : Office.IRibbonExtensibility
     {
+
+        #region Enums
+
+        public enum DateRange
+        {
+            Today,
+            Yesterday,
+            ThisWeek,
+            PreviousSevenDays
+        }
+
+        #endregion Enums
 
         #region Fields and Properties
 
@@ -36,9 +48,6 @@ namespace dRevealAI
         private string SelectedVIPDateRange { get; set; } = "today"; // Default
         private string SelectedVIP { get; set; } = string.Empty;
 
-        public enum DateRange { Today, Yesterday, ThisWeek, PreviousSevenDays }
-
-        //private readonly AIServiceProvider _aiServiceProvider;
         private readonly AIServiceProvider _aiService = new AIServiceProvider();
 
         private List<string> _vipContacts = new List<string>
@@ -58,13 +67,12 @@ namespace dRevealAI
         public void OnVIPContactChanged(Office.IRibbonControl control, string selectedId)
             => SelectedVIP = selectedId;
 
-        #endregion region Fields and Properties
+        #endregion Fields and Properties
 
         #region Constructor
 
-        public MyRibbon()
+        public MainRibbon()
         {
-            //_aiServiceProvider = new AIServiceProvider();
         }
 
         #endregion Constructor
@@ -89,9 +97,6 @@ namespace dRevealAI
                     case "btnDraftEmail":
                         DraftResponse(mailItem);
                         break;
-                    //case "btnListToday":
-                    //    ListTodaysEmails();
-                    //    break;
                 }
             }
             catch (Exception ex)
@@ -825,7 +830,7 @@ $"Original email:\n\n{mailItem.Body}";
                 {
                     Application.EnableVisualStyles();
                     //var form = new EmailListForm(emails);
-                    var form = new EmailListForm(emailsWithSummaries.ToList());
+                    var form = new EmailListDialog(emailsWithSummaries.ToList());
                     //List<(Outlook.MailItem Mail, string Summary)>
                     Application.Run(form);
                 });

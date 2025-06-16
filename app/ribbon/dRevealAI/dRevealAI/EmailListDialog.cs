@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-
+using dReveal.Common;
 using Microsoft.Web.WebView2.WinForms;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
@@ -175,7 +176,11 @@ namespace dRevealAI
                 var ns = outlookApp.GetNamespace("MAPI");
                 originalMail = ns.GetItemFromID(entryId) as Outlook.MailItem;
 
+                string prompt = $"Draft a professional response to this email:\n\n{originalMail.Body}";
+                //string draft = await ProcessWithAI(prompt);
+
                 replyMail = originalMail.Reply();
+                //replyMail.Body = draft + Environment.NewLine + replyMail.Body; // Append AI text
                 replyMail.Display(false); // Show the reply window
             }
             catch (Exception ex)
@@ -224,5 +229,24 @@ namespace dRevealAI
 
         #endregion Helpers
 
+
+        #region Helper Methods
+
+        private readonly AIServiceProvider _aiService = new AIServiceProvider();
+
+        private async Task<string> ProcessWithAI(string prompt)
+        {
+            using (var progressForm = new Form { Text = "Processing...", Width = 300, Height = 100 })
+            {
+                progressForm.Show();
+                progressForm.Refresh();
+                var result = await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
+
+                progressForm.Close();
+                return result;
+            }
+        }
+
+        #endregion Helper Methods
     }
 }

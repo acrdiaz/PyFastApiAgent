@@ -112,7 +112,7 @@ namespace dRevealAI
 
         private async void SummarizeEmail(Outlook.MailItem mailItem)
         {
-            string prompt = $"Summarize this email in 3 bullet points:\n\n{mailItem.Body}";
+            string prompt = $"Summarize this email in 3 bullet points, apply clean format:\n\n{mailItem.Body}";
             string summary = await ProcessWithAI(prompt);
             ShowResult("Email Summary", summary);
         }
@@ -136,11 +136,18 @@ $"Original email:\n\n{mailItem.Body}";
             string prompt = $"Draft a professional response to this email:\n\n{mailItem.Body}";
             string draft = await ProcessWithAI(prompt);
 
-            Outlook.MailItem newMail = Globals.ThisAddIn.Application
-                .CreateItem(Outlook.OlItemType.olMailItem);
-            newMail.Subject = "Re: " + mailItem.Subject;
-            newMail.Body = draft;
-            newMail.Display();
+            var reply = mailItem.Reply();
+            reply.Body = draft + Environment.NewLine + reply.Body; // Append AI text
+            //reply.Body = draft + Environment.NewLine + reply.HTMLBody; // Append AI text
+            reply.Display(false);
+
+            //Outlook.MailItem newMail = Globals.ThisAddIn.Application
+            //    .CreateItem(Outlook.OlItemType.olMailItem);
+            //newMail.Subject = "Re: " + mailItem.Subject;
+            //newMail.Body = draft;
+            //newMail.Display();
+            ////var reply = mail.Reply();
+            ////reply.Display(false);
         }
 
         //private async void ListTodaysEmails()

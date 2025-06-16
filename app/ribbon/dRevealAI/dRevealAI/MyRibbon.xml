@@ -7,11 +7,11 @@
       <tab idMso="TabAddIns" label="dReveal AI">
         <group id="groupEmail" label="Email AI Tools">
           <button id="btnSummarize" label="Summarize" size="large" onAction="Button_Click"
-                  imageMso="ReviewAcceptChanges" supertip="Generate summary of selected email"/>
+                  imageMso="HappyFace" supertip="Generate summary of selected email"/>
           <button id="btnSuggestReply" label="Suggest Reply" size="large" onAction="Button_Click"
-                  imageMso="MailReplyToAll" supertip="Get AI-generated response suggestions"/>
+                  imageMso="Numbering" supertip="Get AI-generated response suggestions"/>
           <button id="btnDraftEmail" label="Draft Response" size="large" onAction="Button_Click"
-                  imageMso="MailCompose" supertip="Create a draft response using AI"/>
+                  imageMso="NewMailMessage" supertip="Create a draft response using AI"/>
         </group>
         <group id="groupTools" label="Date Filters">
           <comboBox id="cmbFilterDateRange"
@@ -25,7 +25,7 @@
             <item id="filterPreviousSevenDays" label="Previous Seven Days"/>
           </comboBox>
           <button id="btnFilterListEmails" label="List Emails"
-                 onAction="FilterListEmails_Click" imageMso="ShowTimeSlots"/>
+                 onAction="FilterListEmails_Click" imageMso="ApplyFilter"/>
         </group>
         <group id="groupVIP" label="VIP Contacts">
           <comboBox id="cmbVIPContacts"
@@ -46,7 +46,7 @@
             <item id="vipPreviousSevenDays" label="Previous Seven Days"/>
           </comboBox>
           <button id="btnCheckVIP" label="Check Emails"
-                 onAction="CheckVIPEmails_Click" imageMso="ReviewShowMarkup"/>
+                 onAction="CheckVIPEmails_Click" imageMso="FileFind"/>
         </group>
       </tab>
     </tabs>

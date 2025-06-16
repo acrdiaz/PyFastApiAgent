@@ -12,7 +12,7 @@ namespace dRevealAI
     public partial class ThisAddIn
     {
 
-        private MainRibbon myRibbon;
+        private MainRibbon _mainRibbon;
 
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
@@ -29,8 +29,8 @@ namespace dRevealAI
         {
             FeedbackLogger.AnalyzeFeedback();
 
-            myRibbon = new MainRibbon();
-            return myRibbon;
+            _mainRibbon = new MainRibbon();
+            return _mainRibbon;
         }
 
         //      void Application_WindowActivate(Microsoft.Office.Interop.Word.Document Doc, Microsoft.Office.Interop.Word.Window Wn)

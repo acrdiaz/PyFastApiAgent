@@ -14,39 +14,35 @@
                   imageMso="NewMailMessage" supertip="Create a draft response using AI"/>
         </group>
         <group id="groupTools" label="Date Filters">
-          <comboBox id="cmbFilterDateRange"
-                   label="Date Range"
-                   getItemID="GetSelectedItemID"
+          <box id="mainBox" boxStyle="horizontal">
+            <box id="leftBox" boxStyle="vertical">
+              <comboBox id="cmbFilterDateRange"
+                       label="Date Range"
+                       getItemID="GetSelectedItemID"
                    
-                   onChange="OnFilterDateRangeChanged">
-            <item id="filterToday" label="Today"/>
-            <item id="filterYesterday" label="Yesterday"/>
-            <item id="filterThisWeek" label="This Week"/>
-            <item id="filterPreviousSevenDays" label="Previous Seven Days"/>
-          </comboBox>
-          <button id="btnFilterListEmails" label="List Emails"
+                       onChange="OnFilterDateRangeChanged">
+                <item id="filterToday" label="Today"/>
+                <item id="filterYesterday" label="Yesterday"/>
+                <item id="filterThisWeek" label="This Week"/>
+                <item id="filterPreviousSevenDays" label="Previous Seven Days" /></comboBox>
+
+              <comboBox id="cmbVIPContacts"
+                       label="Check VIP"
+                   
+                       getItemCount="GetVIPContactCount"
+                       getItemID="GetVIPContactId"
+                       getItemLabel="GetVIPContactLabel"
+                       onChange="OnVIPContactChanged" />
+            </box>
+
+            <box id="rightBox" boxStyle="vertical">
+              <button id="btnFilterListEmails" label="List Emails" size="normal"
                  onAction="FilterListEmails_Click" imageMso="ApplyFilter"/>
-        </group>
-        <group id="groupVIP" label="VIP Contacts">
-          <comboBox id="cmbVIPContacts"
-                   label="Check VIP"
-                   
-                   getItemCount="GetVIPContactCount"
-                   getItemID="GetVIPContactId"
-                   getItemLabel="GetVIPContactLabel"
-                   onChange="OnVIPContactChanged" />
-          <comboBox id="cmbVIPDateRange"
-                   label="Date Range"
-                   getItemID="GetSelectedItemID"
-                    
-                   onChange="OnVIPDateRangeChanged">
-            <item id="vipToday" label="Today"/>
-            <item id="vipYesterday" label="Yesterday"/>
-            <item id="vipThisWeek" label="This Week"/>
-            <item id="vipPreviousSevenDays" label="Previous Seven Days"/>
-          </comboBox>
-          <button id="btnCheckVIP" label="Check Emails"
-                 onAction="CheckVIPEmails_Click" imageMso="FileFind"/>
+
+              <button id="btnCheckVIP" label="VIP Emails" size="normal"
+                     onAction="CheckVIPEmails_Click" imageMso="FileFind"/>
+            </box>
+          </box>
         </group>
       </tab>
     </tabs>

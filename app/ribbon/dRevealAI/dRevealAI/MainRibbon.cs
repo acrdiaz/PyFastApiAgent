@@ -45,7 +45,7 @@ namespace dRevealAI
 
         private Office.IRibbonUI ribbon;
         private string SelectedFilterDateRange { get; set; } = "today"; // Default
-        private string SelectedVIPDateRange { get; set; } = "today"; // Default
+        
         private string SelectedVIP { get; set; } = string.Empty;
 
         private readonly AIServiceProvider _aiService = new AIServiceProvider();
@@ -469,16 +469,16 @@ $"Original email:\n\n{mailItem.Body}";
                    $"[ReceivedTime] <= '{end:MM/dd/yyyy HH:mm}'";
         }
 
-        private string CreateVipDateFilter(DateTime start, DateTime end, string emailAddress)
-        {
-            //string filter = $"[SenderEmailAddress] = '{emailAddress}' AND " +
-            //               $"[ReceivedTime] >= '{DateTime.Today.AddDays(-7):MM/dd/yyyy}'";
+        //private string CreateVipDateFilter(DateTime start, DateTime end, string emailAddress)
+        //{
+        //    //string filter = $"[SenderEmailAddress] = '{emailAddress}' AND " +
+        //    //               $"[ReceivedTime] >= '{DateTime.Today.AddDays(-7):MM/dd/yyyy}'";
 
-            //return $"[SenderEmailAddress] = '{emailAddress}' AND " + CreateDateFilter(start, end);
-            //return $"[SenderEmailAddress] = '{emailAddress}'";
-            //return $"[SenderEmailAddress] like '{emailAddress}'";
-            return $"[SenderEmailAddress] = '{emailAddress}'";
-        }
+        //    //return $"[SenderEmailAddress] = '{emailAddress}' AND " + CreateDateFilter(start, end);
+        //    //return $"[SenderEmailAddress] = '{emailAddress}'";
+        //    //return $"[SenderEmailAddress] like '{emailAddress}'";
+        //    return $"[SenderEmailAddress] = '{emailAddress}'";
+        //}
 
         //private async Task ShowEmailList(List<Outlook.MailItem> emails, DateRange range)
         //{
@@ -666,7 +666,7 @@ $"Original email:\n\n{mailItem.Body}";
             }
 
             DateRange dateRange;
-            switch (SelectedVIPDateRange)
+            switch (SelectedFilterDateRange)
             {
                 case "Previous Seven Days":
                     dateRange = DateRange.PreviousSevenDays;
@@ -691,12 +691,6 @@ $"Original email:\n\n{mailItem.Body}";
             {
                 MessageBox.Show($"Error checking VIP emails: {ex.Message}");
             }
-        }
-
-        // OnVIPDateRangeChanged
-        public void OnVIPDateRangeChanged(Office.IRibbonControl control, string selectedId)
-        {
-            SelectedVIPDateRange = selectedId;
         }
 
         private async Task<List<Outlook.MailItem>> GetEmailsFromVIP(

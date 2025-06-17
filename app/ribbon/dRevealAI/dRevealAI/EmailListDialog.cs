@@ -164,7 +164,8 @@ namespace dRevealAI
             }
         }
 
-        private void ReplyToEmail(string entryId)
+        //private void ReplyToEmail(string entryId)
+        private async Task ReplyToEmail(string entryId)
         {
             Outlook.Application outlookApp = null;
             Outlook.MailItem originalMail = null;
@@ -176,11 +177,11 @@ namespace dRevealAI
                 var ns = outlookApp.GetNamespace("MAPI");
                 originalMail = ns.GetItemFromID(entryId) as Outlook.MailItem;
 
-                string prompt = $"Draft a professional response to this email:\n\n{originalMail.Body}";
-                //string draft = await ProcessWithAI(prompt);
+                string prompt = $"Draft one simple professional response to this email:\n\n{originalMail.Body}";
+                string draft = await ProcessWithAI(prompt);
 
                 replyMail = originalMail.Reply();
-                //replyMail.Body = draft + Environment.NewLine + replyMail.Body; // Append AI text
+                replyMail.Body = draft + Environment.NewLine + replyMail.Body; // Append AI text
                 replyMail.Display(false); // Show the reply window
             }
             catch (Exception ex)

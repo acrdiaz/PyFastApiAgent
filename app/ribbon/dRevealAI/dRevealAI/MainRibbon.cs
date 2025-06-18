@@ -44,6 +44,7 @@ namespace dRevealAI
         #region Fields and Properties
 
         private Office.IRibbonUI ribbon;
+
         private string SelectedFilterDateRange { get; set; } = "today"; // Default
         
         private string SelectedVIP { get; set; } = string.Empty;
@@ -76,37 +77,12 @@ namespace dRevealAI
 
         public MainRibbon()
         {
-            var config = new LlmPromptConfig().LoadPrompts();
-            PromptGroups = config.PromptGroups;
-
-            //foreach (var group in PromptGroups)
-            //{
-            //    string categoryName = group.Key;
-            //    var prompts = group.Value;
-
-            //    Console.WriteLine($"--- {categoryName} ---");
-            //    foreach (var prompt in prompts)
-            //    {
-            //        Console.WriteLine($"{prompt.Key}: {prompt.Value}");
-            //    }
-            //}
-
-
-            // AA1 remove this
-            //var llmPromptConfig = new LlmPromptConfig();
-            //var config = llmPromptConfig.LoadPrompts();
-
-
-            //foreach (var prompt in config.Prompts)
-            //{
-            //    Trace.WriteLine(prompt);
-            //}
-            //return;
+            PromptGroups = new LlmPromptConfig().LoadPrompts().PromptGroups;
         }
 
         #endregion Constructor
 
-        #region Ribbon Handlers
+        #region Ribbon Email AI Tools
 
         public void Button_Click(Office.IRibbonControl control)
         {
@@ -135,49 +111,25 @@ namespace dRevealAI
             }
         }
 
-        #endregion Ribbon Handlers
+        #endregion Ribbon Email AI Tools
 
         #region Email Processing
 
         private async void SummarizeEmail(Outlook.MailItem mailItem)
         {
-            string prompt = $"Summarize this email in 3 bullet points, apply clean format:\n\n{mailItem.Body}";
+            string prompt = string.Format(PromptGroups["EmailAITools"]["summarize"], mailItem.Body);
+
             string summary = await ProcessWithAI(prompt);
             ShowResult("Email Summary", summary);
         }
 
         private async void SuggestReply(Outlook.MailItem mailItem)
         {
-            //string prompt = $"Suggest 3 professional responses to this email:\n\n{mailItem.Body}";
-            string prompt =
-$"Suggest 3 email replies formatted EXACTLY as:\n" +
-$"1. Formal: [Professional tone, full sentences]\n" +
-$"2. Neutral: [Concise but polite]\n" +
-$"3. Friendly: [Casual with emojis if appropriate]\n\n" +
-$"Original email:\n\n{mailItem.Body}";
+            string prompt = string.Format(PromptGroups["EmailAITools"]["suggest_reply"], mailItem.Body);
 
             string suggestions = await ProcessWithAI(prompt);
             ShowResult("Suggested Replies", suggestions);
         }
-
-        //private async void DraftResponse(Outlook.MailItem mailItem)
-        //{
-        //    string prompt = $"Draft a professional response to this email:\n\n{mailItem.Body}";
-        //    string draft = await ProcessWithAI(prompt);
-
-        //    var reply = mailItem.Reply();
-        //    reply.Body = draft + Environment.NewLine + reply.Body; // Append AI text
-        //    //reply.Body = draft + Environment.NewLine + reply.HTMLBody; // Append AI text
-        //    reply.Display(false);
-
-        //    //Outlook.MailItem newMail = Globals.ThisAddIn.Application
-        //    //    .CreateItem(Outlook.OlItemType.olMailItem);
-        //    //newMail.Subject = "Re: " + mailItem.Subject;
-        //    //newMail.Body = draft;
-        //    //newMail.Display();
-        //    ////var reply = mail.Reply();
-        //    ////reply.Display(false);
-        //}
 
         private async void DraftResponse(Outlook.MailItem mailItem)
         {
@@ -211,26 +163,7 @@ $"Original email:\n\n{mailItem.Body}";
             }
         }
 
-        private string ExtractMainContent(string fullBody)
-        {
-            // Basic heuristic to remove Outlook-style quoted text
-            var lines = fullBody.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-
-            var result = new List<string>();
-            foreach (var line in lines)
-            {
-                // Stop at common quote indicators
-                if (line.TrimStart().StartsWith(">")
-                    || line.StartsWith("On ") && line.Contains("wrote:"))
-                {
-                    break; // Stop processing further
-                }
-                result.Add(line);
-            }
-
-            return string.Join(Environment.NewLine, result).Trim();
-        }
-
+        // AA1 remove candidate
         //private async void ListTodaysEmails()
         //{
         //    Outlook.MAPIFolder inbox = null;
@@ -627,7 +560,7 @@ $"Original email:\n\n{mailItem.Body}";
 
         #endregion Helper Methods
 
-        #region Date Filter
+        #region Ribbon Date Filter
 
         public async void FilterListEmails_Click(Office.IRibbonControl control)
         {
@@ -734,7 +667,7 @@ $"Original email:\n\n{mailItem.Body}";
             ShowResult("Email List", sb.ToString());
         }
 
-        #endregion Date Filter
+        #endregion Ribbon Date Filter
 
         #region VIP emails
 

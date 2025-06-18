@@ -1,8 +1,8 @@
 ﻿{
   "PromptGroups": {
     "EmailAITools": {
-      "city_at_night": "A futuristic city at night",
-      "space_station": "Interstellar space station with alien visitors",
+      "summarize": "Summarize this email in 3 bullet points, apply clean format:\n\n{0}",
+      "suggest_reply": "Suggest 3 email replies formatted EXACTLY as:\n1. Formal: [Professional tone, full sentences]\n2. Neutral: [Concise but polite]\n3. Friendly: [Casual with emojis if appropriate]\n\nOriginal email:\n\n{0}",
       "draft_response": "Write a professional response to the email (write just the message):\n\n{0}"
     },
     "Fantasy": {

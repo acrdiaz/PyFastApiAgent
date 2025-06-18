@@ -224,6 +224,26 @@ namespace dRevealAI
 
         #region Helper Methods
 
+        private DateRange ConvertToDateRange(string filterDateRange)
+        {
+            switch (filterDateRange)
+            {
+                case "Previous Seven Days":
+                    return DateRange.PreviousSevenDays;
+                case "Yesterday":
+                    return DateRange.Yesterday;
+                case "This Week":
+                    return DateRange.ThisWeek;
+                case null:
+                case "":
+                    return DateRange.Today;
+                default:
+                    // AA1 improve logging, throwing, or fallback depending on your needs
+                    System.Diagnostics.Debug.WriteLine($"Unexpected date range value: {filterDateRange}");
+                    return DateRange.Today;
+            }
+        }
+
         private async Task<string> ProcessWithAI(string prompt)
         {
             using (var progressForm = new Form { Text = "Processing...", Width = 300, Height = 100 })
@@ -564,22 +584,7 @@ namespace dRevealAI
 
         public async void FilterListEmails_Click(Office.IRibbonControl control)
         {
-            DateRange dateRange;
-            switch (SelectedFilterDateRange)
-            {
-                case "Previous Seven Days":
-                    dateRange = DateRange.PreviousSevenDays;
-                    break;
-                case "Yesterday":
-                    dateRange = DateRange.Yesterday;
-                    break;
-                case "This Week":
-                    dateRange = DateRange.ThisWeek;
-                    break;
-                default: // "today" or any unexpected value
-                    dateRange = DateRange.Today;
-                    break;
-            }
+            DateRange dateRange = ConvertToDateRange(SelectedFilterDateRange);
 
             await ListEmailsByDateRange(dateRange);
         }
@@ -679,22 +684,7 @@ namespace dRevealAI
                 return;
             }
 
-            DateRange dateRange;
-            switch (SelectedFilterDateRange)
-            {
-                case "Previous Seven Days":
-                    dateRange = DateRange.PreviousSevenDays;
-                    break;
-                case "Yesterday":
-                    dateRange = DateRange.Yesterday;
-                    break;
-                case "This Week":
-                    dateRange = DateRange.ThisWeek;
-                    break;
-                default: // "today" or any unexpected value
-                    dateRange = DateRange.Today;
-                    break;
-            }
+            DateRange dateRange = ConvertToDateRange(SelectedFilterDateRange);
 
             try
             {

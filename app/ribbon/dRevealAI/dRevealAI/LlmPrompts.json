@@ -1,0 +1,17 @@
+﻿{
+  "PromptGroups": {
+    "EmailAITools": {
+      "city_at_night": "A futuristic city at night",
+      "space_station": "Interstellar space station with alien visitors",
+      "draft_response": "Write a professional response to the email (write just the message):\n\n{0}"
+    },
+    "Fantasy": {
+      "glowing_forest": "A fantasy forest with glowing trees",
+      "hidden_castle": "An elven castle hidden in the mountains"
+    },
+    "Cyberpunk": {
+      "samurai_on_mars": "Cyberpunk samurai on Mars",
+      "neon_alley": "Neon-lit dystopian alley with hovercars"
+    }
+  }
+}

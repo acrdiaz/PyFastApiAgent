@@ -208,6 +208,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="EmailWithSummary.cs" />
+    <Compile Include="LlmPromptConfig.cs" />
     <Compile Include="MainRibbon.cs" />
     <Compile Include="OutlookClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -228,6 +229,9 @@
     </EmbeddedResource>
     <None Include="app.config" />
     <None Include="dRevealAI_TemporaryKey.pfx" />
+    <Content Include="LlmPrompts.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

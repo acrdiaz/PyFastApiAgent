@@ -52,6 +52,7 @@ namespace dRevealAI
 
         private List<string> _vipContacts = new List<string>
         {
+            "<All>",
             "john.doe@company.com",
             "ceo@company.com",
             "important.client@example.com",
@@ -67,12 +68,40 @@ namespace dRevealAI
         public void OnVIPContactChanged(Office.IRibbonControl control, string selectedId)
             => SelectedVIP = selectedId;
 
+        public Dictionary<string, Dictionary<string, string>> PromptGroups { get; set; }
+
         #endregion Fields and Properties
 
         #region Constructor
 
         public MainRibbon()
         {
+            var config = new LlmPromptConfig().LoadPrompts();
+            PromptGroups = config.PromptGroups;
+
+            //foreach (var group in PromptGroups)
+            //{
+            //    string categoryName = group.Key;
+            //    var prompts = group.Value;
+
+            //    Console.WriteLine($"--- {categoryName} ---");
+            //    foreach (var prompt in prompts)
+            //    {
+            //        Console.WriteLine($"{prompt.Key}: {prompt.Value}");
+            //    }
+            //}
+
+
+            // AA1 remove this
+            //var llmPromptConfig = new LlmPromptConfig();
+            //var config = llmPromptConfig.LoadPrompts();
+
+
+            //foreach (var prompt in config.Prompts)
+            //{
+            //    Trace.WriteLine(prompt);
+            //}
+            //return;
         }
 
         #endregion Constructor
@@ -131,23 +160,75 @@ $"Original email:\n\n{mailItem.Body}";
             ShowResult("Suggested Replies", suggestions);
         }
 
+        //private async void DraftResponse(Outlook.MailItem mailItem)
+        //{
+        //    string prompt = $"Draft a professional response to this email:\n\n{mailItem.Body}";
+        //    string draft = await ProcessWithAI(prompt);
+
+        //    var reply = mailItem.Reply();
+        //    reply.Body = draft + Environment.NewLine + reply.Body; // Append AI text
+        //    //reply.Body = draft + Environment.NewLine + reply.HTMLBody; // Append AI text
+        //    reply.Display(false);
+
+        //    //Outlook.MailItem newMail = Globals.ThisAddIn.Application
+        //    //    .CreateItem(Outlook.OlItemType.olMailItem);
+        //    //newMail.Subject = "Re: " + mailItem.Subject;
+        //    //newMail.Body = draft;
+        //    //newMail.Display();
+        //    ////var reply = mail.Reply();
+        //    ////reply.Display(false);
+        //}
+
         private async void DraftResponse(Outlook.MailItem mailItem)
         {
-            string prompt = $"Draft a professional response to this email:\n\n{mailItem.Body}";
-            string draft = await ProcessWithAI(prompt);
+            if (mailItem == null)
+                return;
 
-            var reply = mailItem.Reply();
-            reply.Body = draft + Environment.NewLine + reply.Body; // Append AI text
-            //reply.Body = draft + Environment.NewLine + reply.HTMLBody; // Append AI text
-            reply.Display(false);
+            try
+            {
+                // Generate AI draft based on original body
+                string prompt = string.Format(PromptGroups["EmailAITools"]["draft_response"], mailItem.Body);
+                string draft = await ProcessWithAI(prompt);
 
-            //Outlook.MailItem newMail = Globals.ThisAddIn.Application
-            //    .CreateItem(Outlook.OlItemType.olMailItem);
-            //newMail.Subject = "Re: " + mailItem.Subject;
-            //newMail.Body = draft;
-            //newMail.Display();
-            ////var reply = mail.Reply();
-            ////reply.Display(false);
+                var reply = mailItem.Reply();
+
+                // Wrap AI response in basic HTML for consistency
+                string htmlResponse = $@"
+                <div style='font-family:Segoe UI; font-size:10pt; margin-bottom:12px;'>
+                    {draft}
+                </div>
+                <hr style='border:1px solid #ccc;' />";
+
+                string newHtmlBody = htmlResponse + reply.HTMLBody;
+                reply.HTMLBody = newHtmlBody;
+
+                // Show the reply window
+                reply.Display(false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error creating reply: {ex.Message}");
+            }
+        }
+
+        private string ExtractMainContent(string fullBody)
+        {
+            // Basic heuristic to remove Outlook-style quoted text
+            var lines = fullBody.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
+            var result = new List<string>();
+            foreach (var line in lines)
+            {
+                // Stop at common quote indicators
+                if (line.TrimStart().StartsWith(">")
+                    || line.StartsWith("On ") && line.Contains("wrote:"))
+                {
+                    break; // Stop processing further
+                }
+                result.Add(line);
+            }
+
+            return string.Join(Environment.NewLine, result).Trim();
         }
 
         //private async void ListTodaysEmails()
@@ -693,52 +774,56 @@ $"Original email:\n\n{mailItem.Body}";
             }
         }
 
-        private async Task<List<Outlook.MailItem>> GetEmailsFromVIP(
-            string emailAddress, 
-            DateRange range)
+        private async Task<List<Outlook.MailItem>> GetEmailsFromVIP(string emailAddress, DateRange range)
         {
             return await Task.Run(() =>
             {
                 Outlook.Application outlook = Globals.ThisAddIn.Application;
-                Outlook.MAPIFolder inbox = outlook.Session.GetDefaultFolder(
-                    Outlook.OlDefaultFolders.olFolderInbox);
-
-                //--
-                //foreach (var item in inbox.Items.OfType<Outlook.MailItem>().Take(50))
-                //{
-                //    var mail = item as Outlook.MailItem;
-                //    if (mail != null)
-                //    {
-                //        Trace.WriteLine($"From: {mail.SenderEmailAddress} | Subject: {mail.Subject}");
-                //    }
-                //}
-
-                //string filter = CreateVipDateFilter(startDate, endDate, emailAddress);
-
-                var (startDate, endDate) = GetDateRange(range);
-                string filter = CreateDateFilter(startDate, endDate);
-                var emails = inbox.Items.Restrict(filter)
-                    .OfType<Outlook.MailItem>()
-                    .OrderByDescending(m => m.ReceivedTime)
-                    .Take(50) // Limit results
-                    .ToList();
-
-                var result = new List<Outlook.MailItem>();
-                foreach (var item in emails)
+                Outlook.MAPIFolder inbox = null;
+                try
                 {
-                    var mail = item as Outlook.MailItem;
-                    if (mail != null)
+                    inbox = outlook.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox);
+
+                    var (startDate, endDate) = GetDateRange(range);
+                    string filter = CreateDateFilter(startDate, endDate);
+
+                    var filteredEmails = inbox.Items.Restrict(filter)
+                        .OfType<Outlook.MailItem>()
+                        .OrderByDescending(m => m.ReceivedTime)
+                        .Take(50)
+                        .ToList();
+
+                    if (emailAddress == "<All>")
+                    {
+                        return filteredEmails;
+                    }
+
+                    var result = new List<Outlook.MailItem>();
+                    foreach (var mail in filteredEmails)
                     {
                         string smtpAddress = GetSmtpAddress(mail);
-                        if (smtpAddress == emailAddress)
+
+                        if (string.Equals(smtpAddress, emailAddress, StringComparison.OrdinalIgnoreCase))
                         {
                             result.Add(mail);
                         }
                     }
-                }
 
-                Marshal.ReleaseComObject(inbox); // AA1 is this necessary?
-                return result;
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    // AA1 Log or show error message
+                    Console.WriteLine($"Error retrieving VIP emails: {ex.Message}");
+                    return new List<Outlook.MailItem>();
+                }
+                finally
+                {
+                    if (inbox != null)
+                    {
+                        Marshal.ReleaseComObject(inbox);
+                    }
+                }
             });
         }
 
@@ -1051,6 +1136,12 @@ $"Original email:\n\n{mailItem.Body}";
         }
 
         #endregion VIP emails
+
+        #region Legacv code
+
+
+
+        #endregion Legacv code
 
 
         #region Images resource

@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using dReveal.Common;
+//using Microsoft.Office.Interop.Outlook;
 using Microsoft.Web.WebView2.WinForms;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
@@ -19,13 +20,16 @@ namespace dRevealAI
         private readonly List<EmailWithSummary> _emails;
         private WebView2 webView;
 
+        public Dictionary<string, Dictionary<string, string>> PromptGroups { get; set; }
+
         #endregion Fields and properties
 
         #region Constructor
-        
-        public EmailListDialog(List<EmailWithSummary> emailsWithSummaries)
+
+        public EmailListDialog(List<EmailWithSummary> emailsWithSummaries, Dictionary<string, Dictionary<string, string>> promptGroups)
         {
             _emails = emailsWithSummaries;
+            PromptGroups = promptGroups;
             InitializeComponent();
         }
 
@@ -177,7 +181,8 @@ namespace dRevealAI
                 var ns = outlookApp.GetNamespace("MAPI");
                 originalMail = ns.GetItemFromID(entryId) as Outlook.MailItem;
 
-                string prompt = $"Draft one simple professional response to this email:\n\n{originalMail.Body}";
+                //string prompt = $"Draft one simple professional response to this email:\n\n{originalMail.Body}";  // AA1 fix format email
+                string prompt = string.Format(PromptGroups["DateFilter"]["suggest_formal_reply"], originalMail.Body);
                 string draft = await ProcessWithAI(prompt);
 
                 replyMail = originalMail.Reply();

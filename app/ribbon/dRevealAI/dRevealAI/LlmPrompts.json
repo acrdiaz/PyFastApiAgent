@@ -5,9 +5,10 @@
       "suggest_reply": "Suggest 3 email replies formatted EXACTLY as:\n1. Formal: [Professional tone, full sentences]\n2. Neutral: [Concise but polite]\n3. Friendly: [Casual with emojis if appropriate]\n\nOriginal email:\n\n{0}",
       "draft_response": "Write a professional response to the email (write just the message):\n\n{0}"
     },
-    "Fantasy": {
-      "glowing_forest": "A fantasy forest with glowing trees",
-      "hidden_castle": "An elven castle hidden in the mountains"
+    "DateFilter": {
+      "summary_email_list_legacy": "Summarize this email in 1-2 sentences. Focus on actions needed and key points:\n\n{0}",
+      "summary_email_list": "Return html <div> snippet. Concise summary in 2 lines focusing on actions and key points:\n{0}",
+      "suggest_formal_reply": "Draft one simple professional response to this email:\n\n{0}"
     },
     "Cyberpunk": {
       "samurai_on_mars": "Cyberpunk samurai on Mars",

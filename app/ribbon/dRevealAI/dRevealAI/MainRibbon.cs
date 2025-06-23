@@ -23,6 +23,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 using Microsoft.Web.WebView2.WinForms;
 using static dRevealAI.MainRibbon;
 using System.Collections.Specialized;
+//using Microsoft.Office.Interop.Outlook;
 
 namespace dRevealAI
 {
@@ -674,58 +675,6 @@ namespace dRevealAI
             }
         }
 
-        private async Task ShowEmailList(List<Outlook.MailItem> emails, DateRange range)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"📅 {range} Emails ({emails.Count})");
-            sb.AppendLine("──────────────────────────────");
-
-            // Process emails in parallel with throttling
-            var options = new ParallelOptions { MaxDegreeOfParallelism = 3 };
-            var emailTasks = emails.Select(async mail =>
-            {
-                try
-                {
-                    var cleanBody = SanitizeEmailBody(mail.Body);
-                    if (string.IsNullOrWhiteSpace(cleanBody))
-                        return (mail, null);
-
-                    // Get AI summary
-                    string prompt = $"Summarize this email in 1-2 sentences. Focus on actions needed and key points:\n\n{cleanBody}";
-                    //string summary = await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
-                    string summary = await ProcessWithAI(prompt);
-
-                    return (mail, summary);
-                }
-                catch
-                {
-                    return (mail, null); // Fallback if summary fails
-                }
-            });
-
-            var summarizedEmails = await Task.WhenAll(emailTasks);
-
-            foreach (var (mail, summary) in summarizedEmails)
-            {
-                sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt} - {mail.SenderName}");
-                sb.AppendLine($"  Subject: {mail.Subject}");
-                sb.AppendLine($"  {(mail.UnRead ? "🆕 UNREAD" : "✓ Read")}");
-
-                if (!string.IsNullOrEmpty(summary))
-                {
-                    sb.AppendLine($"  Summary: {summary}");
-                }
-                else
-                {
-                    sb.AppendLine($"  Preview: {Truncate(SanitizeEmailBody(mail.Body), 100)}");
-                }
-
-                sb.AppendLine();
-            }
-
-            ShowResult("Email List", sb.ToString());
-        }
-
         #endregion Ribbon Date Filter
 
         #region Ribbon VIP emails
@@ -857,7 +806,7 @@ namespace dRevealAI
                 var thread = new Thread(() =>
                 {
                     Application.EnableVisualStyles();
-                    var form = new EmailListDialog(emailsWithSummaries.ToList());
+                    var form = new EmailListDialog(emailsWithSummaries.ToList(), PromptGroups);
                     Application.Run(form);
                 });
                 thread.SetApartmentState(ApartmentState.STA);
@@ -1025,7 +974,8 @@ namespace dRevealAI
             //Return ONLY this exact HTML format (no other text/comments):
             //string prompt = $"Return ONLY this exact <div> (no other text/comments/wrappers): Concise summary focusing on actions and deadlines:\n{cleanBody}";
             //string prompt = $"Return ONLY the exact original <div> don´t add markdown comments, exclude signature at email footer: Concise summary focusing on actions and deadlines:\n{cleanBody}";
-            string prompt = $"Return html <div> snippet. Concise summary in 2 lines focusing on actions and deadlines:\n{cleanBody}";
+            //string prompt = $"Return html <div> snippet. Concise summary in 2 lines focusing on actions and deadlines:\n{cleanBody}";
+            string prompt = string.Format(PromptGroups["DateFilter"]["summary_email_list"], mail.Body);
 
 //            string prompt = $@"
 //In html format only the <div> part, exclude the <html>, <head>
@@ -1091,7 +1041,58 @@ namespace dRevealAI
 
         #region Legacy code
 
+        private async Task ShowEmailList(List<Outlook.MailItem> emails, DateRange range)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"📅 {range} Emails ({emails.Count})");
+            sb.AppendLine("──────────────────────────────");
 
+            // Process emails in parallel with throttling
+            var options = new ParallelOptions { MaxDegreeOfParallelism = 3 };
+            var emailTasks = emails.Select(async mail =>
+            {
+                try
+                {
+                    var cleanBody = SanitizeEmailBody(mail.Body);
+                    if (string.IsNullOrWhiteSpace(cleanBody))
+                        return (mail, null);
+
+                    // Get AI summary
+                    //string prompt = $"Summarize this email in 1-2 sentences. Focus on actions needed and key points:\n\n{cleanBody}";....
+                    string prompt = string.Format(PromptGroups["DateFilter"]["summary_email_list"], mail.Body);
+                    //string summary = await _aiService.GetDefaultService().AnalyzeContentAsync(prompt);
+                    string summary = await ProcessWithAI(prompt);
+
+                    return (mail, summary);
+                }
+                catch
+                {
+                    return (mail, null); // Fallback if summary fails
+                }
+            });
+
+            var summarizedEmails = await Task.WhenAll(emailTasks);
+
+            foreach (var (mail, summary) in summarizedEmails)
+            {
+                sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt} - {mail.SenderName}");
+                sb.AppendLine($"  Subject: {mail.Subject}");
+                sb.AppendLine($"  {(mail.UnRead ? "🆕 UNREAD" : "✓ Read")}");
+
+                if (!string.IsNullOrEmpty(summary))
+                {
+                    sb.AppendLine($"  Summary: {summary}");
+                }
+                else
+                {
+                    sb.AppendLine($"  Preview: {Truncate(SanitizeEmailBody(mail.Body), 100)}");
+                }
+
+                sb.AppendLine();
+            }
+
+            ShowResult("Email List", sb.ToString());
+        }
 
         #endregion Legacy code
 

@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using dReveal.Common;
-//using Microsoft.Office.Interop.Outlook;
 using Microsoft.Web.WebView2.WinForms;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
@@ -30,7 +29,12 @@ namespace dRevealAI
         {
             _emails = emailsWithSummaries;
             PromptGroups = promptGroups;
+
+            // Must be first
             InitializeComponent();
+
+            // Hook up the Load event
+            Load += EmailListDialog_Load;
         }
 
         #endregion Constructor
@@ -137,38 +141,44 @@ namespace dRevealAI
 
         #region Helpers
 
-        private async void InitializeComponent()
+        private void InitializeComponent()
         {
+            this.SuspendLayout();
+
+            this.ClientSize = new System.Drawing.Size(700, 650);
+            this.Name = "EmailListDialog";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "VIP Emails";
-            this.Width = 700;
-            this.Height = 650;
-            this.StartPosition = FormStartPosition.CenterScreen;
 
-            webView = new WebView2
-            {
-                Dock = DockStyle.Fill,
-                CreationProperties = new CoreWebView2CreationProperties
-                {
-                    UserDataFolder = Path.Combine(Path.GetTempPath(), "WebView2Cache")
-                }
-            };
-            this.Controls.Add(webView);
+            this.ResumeLayout(false);
+        }
 
+        private async void EmailListDialog_Load(object sender, EventArgs e)
+        {
             try
             {
-                await webView.EnsureCoreWebView2Async();
-                webView.CoreWebView2.NavigateToString(GenerateEmailHtml(_emails));
+                webView = new WebView2
+                {
+                    Dock = DockStyle.Fill,
+                    CreationProperties = new CoreWebView2CreationProperties
+                    {
+                        UserDataFolder = Path.Combine(Path.GetTempPath(), "WebView2Cache")
+                    }
+                };
+                this.Controls.Add(webView);
 
+                await webView.EnsureCoreWebView2Async();
+
+                webView.CoreWebView2.NavigateToString(GenerateEmailHtml(_emails));
                 SetupWebViewHandlers();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"WebView2 initialization failed: {ex.Message}");
+                MessageBox.Show($"Failed to initialize WebView2: {ex.Message}");
                 this.Close();
             }
         }
 
-        //private void ReplyToEmail(string entryId)
         private async Task ReplyToEmail(string entryId)
         {
             Outlook.Application outlookApp = null;
@@ -181,7 +191,6 @@ namespace dRevealAI
                 var ns = outlookApp.GetNamespace("MAPI");
                 originalMail = ns.GetItemFromID(entryId) as Outlook.MailItem;
 
-                //string prompt = $"Draft one simple professional response to this email:\n\n{originalMail.Body}";  // AA1 fix format email
                 string prompt = string.Format(PromptGroups["DateFilter"]["suggest_formal_reply"], originalMail.Body);
                 string draft = await ProcessWithAI(prompt);
 

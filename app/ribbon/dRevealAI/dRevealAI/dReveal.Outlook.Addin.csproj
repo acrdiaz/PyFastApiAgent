@@ -230,9 +230,6 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="Ribbon1.resx">
-      <DependentUpon>Ribbon1.cs</DependentUpon>
-    </EmbeddedResource>
     <None Include="app.config" />
     <None Include="dRevealAI_TemporaryKey.pfx" />
     <Content Include="LlmPrompts.json">
@@ -247,12 +244,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
-    <Compile Include="Ribbon1.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="Ribbon1.Designer.cs">
-      <DependentUpon>Ribbon1.cs</DependentUpon>
     </Compile>
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>

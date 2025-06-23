@@ -9,10 +9,6 @@
       "summary_email_list_legacy": "Summarize this email in 1-2 sentences. Focus on actions needed and key points:\n\n{0}",
       "summary_email_list": "Return html <div> snippet. Concise summary in 2 lines focusing on actions and key points:\n{0}",
       "suggest_formal_reply": "Draft one simple professional response to this email:\n\n{0}"
-    },
-    "Cyberpunk": {
-      "samurai_on_mars": "Cyberpunk samurai on Mars",
-      "neon_alley": "Neon-lit dystopian alley with hovercars"
     }
   }
 }

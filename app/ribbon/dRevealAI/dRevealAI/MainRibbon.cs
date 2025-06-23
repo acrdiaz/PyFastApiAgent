@@ -22,6 +22,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 using Microsoft.Web.WebView2.WinForms;
 using static dRevealAI.MainRibbon;
+using System.Collections.Specialized;
 
 namespace dRevealAI
 {
@@ -52,16 +53,18 @@ namespace dRevealAI
 
         private readonly AIServiceProvider _aiService = new AIServiceProvider();
 
-        private List<string> _vipContacts = new List<string>
-        {
-            "<All>",
-            "john.doe@company.com",
-            "ceo@company.com",
-            "important.client@example.com",
-            "kabularach@info-arch.com",
-            "rcoronado@info-arch.com",
-            "cdiaz@info-arch.com",
-        };
+        //private List<string> _vipContacts = new List<string>
+        //{
+        //    "<All>",
+        //    "john.doe@company.com",
+        //    "ceo@company.com",
+        //    "important.client@example.com",
+        //    "kabularach@info-arch.com",
+        //    "rcoronado@info-arch.com",
+        //    "cdiaz@info-arch.com",
+        //};
+
+        private List<string> _vipContacts = new List<string> { "<All>" };
 
         // ComboBox callbacks
         public int GetVIPContactCount(Office.IRibbonControl control) => _vipContacts.Count;
@@ -79,6 +82,7 @@ namespace dRevealAI
         public MainRibbon()
         {
             PromptGroups = new LlmPromptConfig().LoadPrompts().PromptGroups;
+            InitializeVipContacts();
         }
 
         #endregion Constructor
@@ -224,6 +228,54 @@ namespace dRevealAI
         #endregion Email Processing
 
         #region Helper Methods
+
+        //private void InitializeVipContacts()
+        //{
+        //    _vipContacts.Clear();
+        //    _vipContacts.Add("<All>");
+        //    _vipContacts.AddRange(Properties.Settings.Default.VipContacts.Cast<string>());
+        //}
+
+        //private void InitializeVipContacts()
+        //{
+        //    _vipContacts.Clear();
+        //    _vipContacts.Add("<All>");
+
+        //    // Ensure VipContacts is not null
+        //    if (Properties.Settings.Default.VipContacts == null)
+        //    {
+        //        Properties.Settings.Default.VipContacts = new StringCollection();
+        //    }
+
+        //    // Only add items if they exist
+        //    if (Properties.Settings.Default.VipContacts.Count > 0)
+        //    {
+        //        _vipContacts.AddRange(Properties.Settings.Default.VipContacts.Cast<string>());
+        //    }
+        //}
+
+        private void InitializeVipContacts()
+        {
+            _vipContacts.Clear();
+            _vipContacts.Add("<All>");
+
+            if (Properties.Settings.Default.VipContacts == null)
+            {
+                Properties.Settings.Default.VipContacts = new StringCollection();
+                Properties.Settings.Default.VipContacts.AddRange(new[]
+                {
+            "john.doe@company.com",
+            "ceo@company.com",
+            "important.client@example.com",
+            "kabularach@info-arch.com",
+            "rcoronado@info-arch.com",
+            "cdiaz@info-arch.com"
+        });
+                Properties.Settings.Default.Save(); // Save defaults
+            }
+
+            _vipContacts.AddRange(Properties.Settings.Default.VipContacts.Cast<string>());
+        }
 
         private DateRange ConvertToDateRange(string filterDateRange)
         {
@@ -1022,13 +1074,26 @@ namespace dRevealAI
                    RegexOptions.Multiline | RegexOptions.IgnoreCase).Trim();
         }
 
+        public void OnManageVIPContactsClick(Office.IRibbonControl control)
+        {
+            using (var form = new VipContactEditorForm())
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    InitializeVipContacts(); // Reload VIP list
+                    ribbon.Invalidate(); // Optional: refresh ribbon UI
+                    MessageBox.Show("VIP contacts updated successfully.");
+                }
+            }
+        }
+
         #endregion Ribbon VIP emails
 
-        #region Legacv code
+        #region Legacy code
 
 
 
-        #endregion Legacv code
+        #endregion Legacy code
 
 
         #region Images resource

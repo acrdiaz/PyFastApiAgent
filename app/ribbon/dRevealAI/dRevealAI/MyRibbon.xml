@@ -44,6 +44,11 @@
             </box>
           </box>
         </group>
+        <group id="groupConfig" label="Configuration">
+          <button id="btnManageVIP" label="Manage VIP Contacts"
+                  imageMso="ContactCard" size="normal"
+                  onAction="OnManageVIPContactsClick"/>
+        </group>
       </tab>
     </tabs>
   </ribbon>

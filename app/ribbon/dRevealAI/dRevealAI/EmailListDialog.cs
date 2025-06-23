@@ -186,8 +186,19 @@ namespace dRevealAI
                 string draft = await ProcessWithAI(prompt);
 
                 replyMail = originalMail.Reply();
-                replyMail.Body = draft + Environment.NewLine + replyMail.Body; // Append AI text
-                replyMail.Display(false); // Show the reply window
+
+                // Wrap AI response in basic HTML for consistency
+                string htmlResponse = $@"
+                <div style='font-family:Segoe UI; font-size:10pt; margin-bottom:12px;'>
+                    {draft}
+                </div>
+                <hr style='border:1px solid #ccc;' />";
+
+                string newHtmlBody = htmlResponse + replyMail.HTMLBody;
+                replyMail.HTMLBody = newHtmlBody;
+
+                // Show the reply window
+                replyMail.Display(false);
             }
             catch (Exception ex)
             {

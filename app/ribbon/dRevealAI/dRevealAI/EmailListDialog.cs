@@ -45,48 +45,48 @@ namespace dRevealAI
         {
             var sb = new StringBuilder();
             sb.Append(@"<!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
-            .email { 
-                padding: 15px; 
-                margin-bottom: 15px; 
-                background: #f8f8f8;
-                border-left: 4px solid #2b579a;
-                border-radius: 4px;
-            }
-            .unread { border-left-color: #e74c3c; }
-            .btn { 
-                padding: 5px 12px;
-                margin-right: 8px;
-                border: none;
-                border-radius: 3px;
-                cursor: pointer;
-            }
-            .btn-open { background: #2b579a; color: white; }
-            .btn-reply { background: #27ae60; color: white; }
-        </style>
-    </head>
-    <body>");
+                        <html>
+                        <head>
+                            <style>
+                                body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
+                                .email { 
+                                    padding: 15px; 
+                                    margin-bottom: 15px; 
+                                    background: #f8f8f8;
+                                    border-left: 4px solid #2b579a;
+                                    border-radius: 4px;
+                                }
+                                .unread { border-left-color: #e74c3c; }
+                                .btn { 
+                                    padding: 5px 12px;
+                                    margin-right: 8px;
+                                    border: none;
+                                    border-radius: 3px;
+                                    cursor: pointer;
+                                }
+                                .btn-open { background: #2b579a; color: white; }
+                                .btn-reply { background: #27ae60; color: white; }
+                            </style>
+                        </head>
+                        <body>");
 
             foreach (var mail in emails)
             {
                 sb.Append($@"
-        <div class='email {(mail.Mail.UnRead ? "unread" : "")}'>
-            <div><strong>📅</strong> {mail.Mail.ReceivedTime:MMM d, yyyy h:mm tt}</div>
-            <div><strong>📩</strong> From: {mail.Mail.SenderName}</div>
-            <div><strong>🔖</strong> Subject: {mail.Mail.Subject}</div>
-            <div><strong>{GetSummaryEmoji(mail.Summary)}</strong> Summary: {mail.Summary}</div>
-            <div style='margin-top:10px;'>
-                <button class='btn btn-open' onclick='window.chrome.webview.postMessage(`open:{mail.Mail.EntryID}`)'>
-                    Open
-                </button>
-                <button class='btn btn-reply' onclick='window.chrome.webview.postMessage(`reply:{mail.Mail.EntryID}`)'>
-                    Reply
-                </button>
-            </div>
-        </div>");
+                        <div class='email {(mail.Mail.UnRead ? "unread" : "")}'>
+                            <div><strong>📅</strong> {mail.Mail.ReceivedTime:MMM d, yyyy h:mm tt}</div>
+                            <div><strong>📩</strong> From: {mail.Mail.SenderName}</div>
+                            <div><strong>🔖</strong> Subject: {mail.Mail.Subject}</div>
+                            <div><strong>{GetSummaryEmoji(mail.Summary)}</strong> Summary: {mail.Summary}</div>
+                            <div style='margin-top:10px;'>
+                                <button class='btn btn-open' onclick='window.chrome.webview.postMessage(`open:{mail.Mail.EntryID}`)'>
+                                    Open
+                                </button>
+                                <button class='btn btn-reply' onclick='window.chrome.webview.postMessage(`reply:{mail.Mail.EntryID}`)'>
+                                    Reply
+                                </button>
+                            </div>
+                        </div>");
             }
 
             sb.Append("</body></html>");
@@ -243,7 +243,6 @@ namespace dRevealAI
                 if (outlookApp != null) Marshal.ReleaseComObject(outlookApp);
             }
         }
-
 
         string GetSummaryEmoji(string summary)
         {

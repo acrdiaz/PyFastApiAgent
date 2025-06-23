@@ -228,14 +228,14 @@ namespace dRevealAI
                 Properties.Settings.Default.VipContacts = new StringCollection();
                 Properties.Settings.Default.VipContacts.AddRange(new[]
                 {
-            "john.doe@company.com",
-            "ceo@company.com",
-            "important.client@example.com",
-            "kabularach@info-arch.com",
-            "rcoronado@info-arch.com",
-            "cdiaz@info-arch.com"
-        });
-                Properties.Settings.Default.Save(); // Save defaults
+                    "john.doe@company.com",
+                    "ceo@company.com",
+                    "important.client@example.com",
+                    "kabularach@info-arch.com",
+                    "rcoronado@info-arch.com",
+                    "cdiaz@info-arch.com"
+                });
+                Properties.Settings.Default.Save();
             }
 
             _vipContacts.AddRange(Properties.Settings.Default.VipContacts.Cast<string>());
@@ -704,24 +704,12 @@ namespace dRevealAI
         #endregion
 
         #region Ribbon Callbacks
+
         //Create callback methods here. For more information about adding callback methods, visit https://go.microsoft.com/fwlink/?LinkID=271226
-        
         public void Ribbon_Load(Office.IRibbonUI ribbonUI)
         {
             this.ribbon = ribbonUI;
-            //this.ribbon.Invalidate(); // Forces the ribbon to refresh
         }
-
-        //// AA1 this does not work
-        //// Callback to get the selected item ID for cmbFilterDateRange
-        //public string GetSelectedItemID(Office.IRibbonControl control)
-        //{
-        //    if (control.Id == "cmbFilterDateRange")
-        //    {
-        //        return "today"; // Default value
-        //    }
-        //    return null;
-        //}
 
         #endregion
 

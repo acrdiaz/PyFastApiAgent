@@ -48,19 +48,18 @@ namespace dRevealAI
         private Office.IRibbonUI ribbon;
 
         private string SelectedFilterDateRange { get; set; } = "today"; // Default
-        
+
         private string SelectedVIP { get; set; } = string.Empty;
 
         private readonly AIServiceProvider _aiService = new AIServiceProvider();
 
-        private List<string> _vipContacts = new List<string> { "<All>" };
+        public List<string> VIPContacts { get; } = new List<string> { "<All>" };
 
         // ComboBox callbacks
-        public int GetVIPContactCount(Office.IRibbonControl control) => _vipContacts.Count;
-        public string GetVIPContactLabel(Office.IRibbonControl control, int index) => _vipContacts[index];
+        public int GetVIPContactCount(Office.IRibbonControl control) => VIPContacts.Count;
+        public string GetVIPContactLabel(Office.IRibbonControl control, int index) => VIPContacts[index];
         public string GetSelectedVIP(Office.IRibbonControl control) => SelectedVIP;
-        public void OnVIPContactChanged(Office.IRibbonControl control, string selectedId)
-            => SelectedVIP = selectedId;
+        public void OnVIPContactChanged(Office.IRibbonControl control, string selectedId) => SelectedVIP = selectedId;
 
         public Dictionary<string, Dictionary<string, string>> PromptGroups { get; set; }
 
@@ -71,7 +70,7 @@ namespace dRevealAI
         public MainRibbon()
         {
             PromptGroups = new LlmPromptConfig().LoadPrompts().PromptGroups;
-            InitializeVipContacts();
+            InitializeVIPContacts();
         }
 
         #endregion Constructor
@@ -157,71 +156,14 @@ namespace dRevealAI
             }
         }
 
-        // AA1 remove candidate
-        //private async void ListTodaysEmails()
-        //{
-        //    Outlook.MAPIFolder inbox = null;
-        //    try
-        //    {
-        //        Outlook.Application outlookApp = Globals.ThisAddIn.Application;
-        //        inbox = outlookApp.Session.GetDefaultFolder(
-        //            Outlook.OlDefaultFolders.olFolderInbox);
-
-        //        DateTime today = DateTime.Today;
-        //        var todayEmails = inbox.Items
-        //            .OfType<Outlook.MailItem>()
-        //            .Where(mail => mail.ReceivedTime.Date == today)
-        //            .OrderByDescending(mail => mail.ReceivedTime)
-        //            .Take(50) // Limit to 50 most recent
-        //            .ToList();
-
-        //        if (!todayEmails.Any())
-        //        {
-        //            MessageBox.Show("No emails found for today.");
-        //            return;
-        //        }
-
-        //        // Build formatted list
-        //        var sb = new StringBuilder();
-        //        sb.AppendLine($"📅 Emails Received Today ({today:d})");
-        //        sb.AppendLine("──────────────────────────────");
-
-        //        string summary = string.Empty;
-        //        string prompt = string.Empty;
-        //        foreach (var mail in todayEmails)
-        //        {
-        //            sb.AppendLine($"• {mail.ReceivedTime:t} - {mail.SenderName}");
-        //            sb.AppendLine($"  Subject: {mail.Subject}");
-        //            prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
-        //            summary = await ProcessWithAI(prompt);
-        //            sb.AppendLine($"  Summary: {summary}");
-        //            sb.AppendLine();
-        //        }
-
-        //        // Display in results window
-        //        ShowResult("Today's Emails", sb.ToString());
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show($"Error listing emails: {ex.Message}");
-        //    }
-        //    finally
-        //    {
-        //        if (inbox != null)
-        //        {
-        //            Marshal.ReleaseComObject(inbox);
-        //        }
-        //    }
-        //}
-
         #endregion Email Processing
 
         #region Helper Methods
 
-        private void InitializeVipContacts()
+        private void InitializeVIPContacts()
         {
-            _vipContacts.Clear();
-            _vipContacts.Add("<All>");
+            VIPContacts.Clear();
+            VIPContacts.Add("<All>");
 
             if (Properties.Settings.Default.VipContacts == null)
             {
@@ -238,7 +180,7 @@ namespace dRevealAI
                 Properties.Settings.Default.Save();
             }
 
-            _vipContacts.AddRange(Properties.Settings.Default.VipContacts.Cast<string>());
+            VIPContacts.AddRange(Properties.Settings.Default.VipContacts.Cast<string>());
         }
 
         private DateRange ConvertToDateRange(string filterDateRange)
@@ -614,8 +556,10 @@ namespace dRevealAI
             {
                 if (form.ShowDialog() == DialogResult.OK)
                 {
-                    InitializeVipContacts(); // Reload VIP list
-                    ribbon.Invalidate(); // Optional: refresh ribbon UI
+                    // Reload VIP list
+                    InitializeVIPContacts();
+                    // Optional: refresh ribbon UI
+                    ribbon.Invalidate();
                     MessageBox.Show("VIP contacts updated successfully.");
                 }
             }
@@ -678,6 +622,61 @@ namespace dRevealAI
             ShowResult("Email List", sb.ToString());
         }
 
+        private async void ListTodaysEmails()
+        {
+            Outlook.MAPIFolder inbox = null;
+            try
+            {
+                Outlook.Application outlookApp = Globals.ThisAddIn.Application;
+                inbox = outlookApp.Session.GetDefaultFolder(
+                    Outlook.OlDefaultFolders.olFolderInbox);
+
+                DateTime today = DateTime.Today;
+                var todayEmails = inbox.Items
+                    .OfType<Outlook.MailItem>()
+                    .Where(mail => mail.ReceivedTime.Date == today)
+                    .OrderByDescending(mail => mail.ReceivedTime)
+                    .Take(50) // Limit to 50 most recent
+                    .ToList();
+
+                if (!todayEmails.Any())
+                {
+                    MessageBox.Show("No emails found for today.");
+                    return;
+                }
+
+                // Build formatted list
+                var sb = new StringBuilder();
+                sb.AppendLine($"📅 Emails Received Today ({today:d})");
+                sb.AppendLine("──────────────────────────────");
+
+                string summary = string.Empty;
+                string prompt = string.Empty;
+                foreach (var mail in todayEmails)
+                {
+                    sb.AppendLine($"• {mail.ReceivedTime:t} - {mail.SenderName}");
+                    sb.AppendLine($"  Subject: {mail.Subject}");
+                    prompt = $"Summarize this email in 3 lines:\n\n{mail.Body}";
+                    summary = await ProcessWithAI(prompt);
+                    sb.AppendLine($"  Summary: {summary}");
+                    sb.AppendLine();
+                }
+
+                // Display in results window
+                ShowResult("Today's Emails", sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error listing emails: {ex.Message}");
+            }
+            finally
+            {
+                if (inbox != null)
+                {
+                    Marshal.ReleaseComObject(inbox);
+                }
+            }
+        }
         #endregion Legacy code
 
 
@@ -709,6 +708,8 @@ namespace dRevealAI
         public void Ribbon_Load(Office.IRibbonUI ribbonUI)
         {
             this.ribbon = ribbonUI;
+            // Forces the ribbon to refresh and reflect selected item
+            this.ribbon.Invalidate();
         }
 
         #endregion

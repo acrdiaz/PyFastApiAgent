@@ -33,8 +33,6 @@ namespace dRevealAI
             return _mainRibbon;
         }
 
-        //      void Application_WindowActivate(Microsoft.Office.Interop.Word.Document Doc, Microsoft.Office.Interop.Word.Window Wn)
-
         #region VSTO generated code
 
         /// <summary>

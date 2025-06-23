@@ -70,6 +70,9 @@ namespace dRevealAI
                         </head>
                         <body>");
 
+            string unread = "🆕 UNREAD";
+            string read = "✓ Read";
+
             foreach (var mail in emails)
             {
                 sb.Append($@"
@@ -77,6 +80,7 @@ namespace dRevealAI
                             <div><strong>📅</strong> {mail.Mail.ReceivedTime:MMM d, yyyy h:mm tt}</div>
                             <div><strong>📩</strong> From: {mail.Mail.SenderName}</div>
                             <div><strong>🔖</strong> Subject: {mail.Mail.Subject}</div>
+                            <div><strong>📌</strong> Status: {(mail.Mail.UnRead ? unread : read)}</div>
                             <div><strong>{GetSummaryEmoji(mail.Summary)}</strong> Summary: {mail.Summary}</div>
                             <div style='margin-top:10px;'>
                                 <button class='btn btn-open' onclick='window.chrome.webview.postMessage(`open:{mail.Mail.EntryID}`)'>

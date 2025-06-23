@@ -21,6 +21,7 @@ using Office = Microsoft.Office.Core;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 using Microsoft.Web.WebView2.WinForms;
+using static dRevealAI.MainRibbon;
 
 namespace dRevealAI
 {
@@ -609,7 +610,8 @@ namespace dRevealAI
                     .Take(100)
                     .ToList();
 
-                await ShowEmailList(emails, range);
+                //await ShowEmailList(emails, range);....
+                await ShowVIPEmailList(emails, /*SelectedVIP, */range);
             }
             catch (Exception ex)
             {
@@ -674,7 +676,7 @@ namespace dRevealAI
 
         #endregion Ribbon Date Filter
 
-        #region VIP emails
+        #region Ribbon VIP emails
 
         public async void CheckVIPEmails_Click(Office.IRibbonControl control)
         {
@@ -684,12 +686,12 @@ namespace dRevealAI
                 return;
             }
 
-            DateRange dateRange = ConvertToDateRange(SelectedFilterDateRange);
-
             try
             {
+                DateRange dateRange = ConvertToDateRange(SelectedFilterDateRange);
+
                 var emails = await GetEmailsFromVIP(SelectedVIP, dateRange);
-                await ShowVIPEmailList(emails, SelectedVIP, dateRange);
+                await ShowVIPEmailList(emails, /*SelectedVIP, */dateRange); // AA1 needs the VIP email?
             }
             catch (Exception ex)
             {
@@ -781,48 +783,13 @@ namespace dRevealAI
             return null;
         }
 
-        private async Task ShowVIPEmailList(List<Outlook.MailItem> emails, string vipEmail, DateRange range)
+        private async Task ShowVIPEmailList(List<Outlook.MailItem> emails, /*string vipEmail, */DateRange range)
         {
             if (emails == null || emails.Count == 0)
             {
                 MessageBox.Show("No recent emails found from this VIP.");
                 return;
             }
-
-            //var sb = new StringBuilder();
-            //sb.AppendLine($"⭐ VIP Emails From: {vipEmail}");
-            //sb.AppendLine($"📅 {range} Emails ({emails.Count})");
-            //sb.AppendLine("──────────────────────────────");
-
-            //foreach (var mail in emails)
-            //{
-            //    //string summary = await GetEmailSummary(mail); AA1 enable this
-            //    string summary = string.Empty;
-
-            //    sb.AppendLine($"• {mail.ReceivedTime:MMM d h:mm tt}");
-            //    sb.AppendLine($"  SenderName: {mail.SenderName}");
-            //    sb.AppendLine($"  Subject: {mail.Subject}");
-            //    sb.AppendLine($"  Status: {(mail.UnRead ? "UNREAD" : "Read")}");
-            //    sb.AppendLine($"  Importance: {mail.Importance.ToString().ToUpper()}");
-            //    sb.AppendLine($"  Summary: {summary}");
-            //    //sb.AppendLine($"  ID: {mail.ConversationID}"); // Implement "conversation view"
-            //    //sb.AppendLine($"  ID: {mail.EntryID}"); // Track a specific email
-            //    sb.AppendLine();
-            //}
-
-            // Pass both the text and the list of emails
-            //ShowResult($"VIP Emails from {vipEmail}", sb.ToString(), emails);
-            //ShowResult($"VIP Emails from {vipEmail}", sb.ToString());
-            //ShowHybridView(emails);
-            //ShowEmailListWeb(emails);
-            //await ShowEmailListWebView2(emails);
-
-
-            //var emailsWithSummaries = await Task.WhenAll(emails.Select(async mail =>
-            //new {
-            //    Mail = mail,
-            //    Summary = await GetEmailSummary(mail)
-            //}));
 
             var emailsWithSummaries = await Task.WhenAll(
                 emails.Select(async mail => new EmailWithSummary
@@ -838,133 +805,130 @@ namespace dRevealAI
                 var thread = new Thread(() =>
                 {
                     Application.EnableVisualStyles();
-                    //var form = new EmailListForm(emails);
                     var form = new EmailListDialog(emailsWithSummaries.ToList());
-                    //List<(Outlook.MailItem Mail, string Summary)>
                     Application.Run(form);
                 });
                 thread.SetApartmentState(ApartmentState.STA);
                 thread.Start();
                 thread.Join();
             });
-
         }
 
-        private async Task ShowEmailListWebView2(List<Outlook.MailItem> emails)
-        {
-            // Create the form
-            var form = new Form
-            {
-                Text = "VIP Emails",
-                Width = 700,
-                Height = 650,
-                StartPosition = FormStartPosition.CenterScreen
-            };
+        //private async Task ShowEmailListWebView2(List<Outlook.MailItem> emails)
+        //{
+        //    // Create the form
+        //    var form = new Form
+        //    {
+        //        Text = "VIP Emails",
+        //        Width = 700,
+        //        Height = 650,
+        //        StartPosition = FormStartPosition.CenterScreen
+        //    };
 
-            // Create and configure WebView2
-            var webView = new WebView2
-            {
-                Dock = DockStyle.Fill,
-                CreationProperties = new CoreWebView2CreationProperties
-                {
-                    UserDataFolder = Path.Combine(Path.GetTempPath(), "WebView2Cache")
-                }
-            };
-            form.Controls.Add(webView);
+        //    // Create and configure WebView2
+        //    var webView = new WebView2
+        //    {
+        //        Dock = DockStyle.Fill,
+        //        CreationProperties = new CoreWebView2CreationProperties
+        //        {
+        //            UserDataFolder = Path.Combine(Path.GetTempPath(), "WebView2Cache")
+        //        }
+        //    };
+        //    form.Controls.Add(webView);
 
-            // Initialize WebView2
-            await webView.EnsureCoreWebView2Async();
+        //    // Initialize WebView2
+        //    await webView.EnsureCoreWebView2Async();
 
-            // Load HTML content
-            webView.CoreWebView2.NavigateToString(GenerateEmailHtml(emails));
+        //    // Load HTML content
+        //    webView.CoreWebView2.NavigateToString(GenerateEmailHtml(emails));
 
-            // Handle click events from JavaScript
-            webView.CoreWebView2.WebMessageReceived += (sender, e) =>
-            {
-                if (Guid.TryParse(e.WebMessageAsJson.Trim('"'), out var entryId))
-                {
-                    OpenEmail(entryId.ToString());
-                }
-            };
+        //    // Handle click events from JavaScript
+        //    webView.CoreWebView2.WebMessageReceived += (sender, e) =>
+        //    {
+        //        if (Guid.TryParse(e.WebMessageAsJson.Trim('"'), out var entryId))
+        //        {
+        //            OpenEmail(entryId.ToString());
+        //        }
+        //    };
 
-            form.ShowDialog();
-        }
+        //    form.ShowDialog();
+        //}
 
-        private string GenerateEmailHtml(List<Outlook.MailItem> emails)
-        {
-            var sb = new StringBuilder();
-            sb.Append(@"<!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body { 
-                font-family: 'Segoe UI', sans-serif; 
-                margin: 20px;
-                line-height: 1.6;
-            }
-            .email {
-                padding: 15px;
-                margin-bottom: 15px;
-                border-radius: 5px;
-                background: #f9f9f9;
-                border-left: 4px solid #2b579a;
-            }
-            .action-btn {
-                background: #2b579a;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                border-radius: 3px;
-                cursor: pointer;
-                margin-top: 5px;
-            }
-            .unread {
-                border-left-color: #e74c3c;
-                background: #fff0f0;
-            }
-        </style>
-    </head>
-    <body>");
+    //    private string GenerateEmailHtml(List<Outlook.MailItem> emails)
+    //    {
+    //        var sb = new StringBuilder();
+    //        sb.Append(@"<!DOCTYPE html>
+    //<html>
+    //<head>
+    //    <style>
+    //        body { 
+    //            font-family: 'Segoe UI', sans-serif; 
+    //            margin: 20px;
+    //            line-height: 1.6;
+    //        }
+    //        .email {
+    //            padding: 15px;
+    //            margin-bottom: 15px;
+    //            border-radius: 5px;
+    //            background: #f9f9f9;
+    //            border-left: 4px solid #2b579a;
+    //        }
+    //        .action-btn {
+    //            background: #2b579a;
+    //            color: white;
+    //            border: none;
+    //            padding: 5px 10px;
+    //            border-radius: 3px;
+    //            cursor: pointer;
+    //            margin-top: 5px;
+    //        }
+    //        .unread {
+    //            border-left-color: #e74c3c;
+    //            background: #fff0f0;
+    //        }
+    //    </style>
+    //</head>
+    //<body>");
 
-            foreach (var mail in emails)
-            {
-                sb.Append($@"
-        <div class='email {(mail.UnRead ? "unread" : "")}'>
-            <div><strong>📅</strong> {mail.ReceivedTime:MMM d, yyyy h:mm tt}</div>
-            <div><strong>📩</strong> From: {mail.SenderName}</div>
-            <div><strong>🔖</strong> Subject: {mail.Subject}</div>
-            <div><strong>📌</strong> Status: {(mail.UnRead ? "UNREAD" : "Read")}</div>
-            <button class='action-btn' onclick='window.chrome.webview.postMessage(`{mail.EntryID}`)'>
-                Open Email
-            </button>
-        </div>");
-            }
+    //        foreach (var mail in emails)
+    //        {
+    //            sb.Append($@"
+    //    <div class='email {(mail.UnRead ? "unread" : "")}'>
+    //        <div><strong>📅</strong> {mail.ReceivedTime:MMM d, yyyy h:mm tt}</div>
+    //        <div><strong>📩</strong> From: {mail.SenderName}</div>
+    //        <div><strong>🔖</strong> Subject: {mail.Subject}</div>
+    //        <div><strong>📌</strong> Status: {(mail.UnRead ? "UNREAD" : "Read")}</div>
+    //        <button class='action-btn' onclick='window.chrome.webview.postMessage(`{mail.EntryID}`)'>
+    //            Open Email
+    //        </button>
+    //    </div>");
+    //        }
 
-            sb.Append("</body></html>");
-            return sb.ToString();
-        }
+    //        sb.Append("</body></html>");
+    //        return sb.ToString();
+    //    }
 
-        private void OpenEmail(string entryId)
-        {
-            try
-            {
-                Outlook.MailItem mail = null;
-                try
-                {
-                    mail = Globals.ThisAddIn.Application.Session.GetItemFromID(entryId) as Outlook.MailItem;
-                    mail?.Display(false);
-                }
-                finally
-                {
-                    if (mail != null) Marshal.ReleaseComObject(mail);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error opening email:\n{ex.Message}", "Error",
-                               MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+    //    private void OpenEmail(string entryId)
+    //    {
+    //        try
+    //        {
+    //            Outlook.MailItem mail = null;
+    //            try
+    //            {
+    //                mail = Globals.ThisAddIn.Application.Session.GetItemFromID(entryId) as Outlook.MailItem;
+    //                mail?.Display(false);
+    //            }
+    //            finally
+    //            {
+    //                if (mail != null) Marshal.ReleaseComObject(mail);
+    //            }
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            MessageBox.Show($"Error opening email:\n{ex.Message}", "Error",
+    //                           MessageBoxButtons.OK, MessageBoxIcon.Error);
+    //        }
+    //    }
 
 
 
@@ -987,21 +951,21 @@ namespace dRevealAI
         //    }
         //}
 
-        private void ReplyToEmail(string entryId)
-        {
-            try
-            {
-                var mail = (Outlook.MailItem)Globals.ThisAddIn.Application.Session.GetItemFromID(entryId);
-                var reply = mail.Reply();
-                reply.Display(false);
-                Marshal.ReleaseComObject(reply);
-                Marshal.ReleaseComObject(mail);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to reply:\n{ex.Message}");
-            }
-        }
+        //private void ReplyToEmail(string entryId)
+        //{
+        //    try
+        //    {
+        //        var mail = (Outlook.MailItem)Globals.ThisAddIn.Application.Session.GetItemFromID(entryId);
+        //        var reply = mail.Reply();
+        //        reply.Display(false);
+        //        Marshal.ReleaseComObject(reply);
+        //        Marshal.ReleaseComObject(mail);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"Failed to reply:\n{ex.Message}");
+        //    }
+        //}
 
         private async Task<string> GetEmailSummary(Outlook.MailItem mail)
         {
@@ -1058,7 +1022,7 @@ namespace dRevealAI
                    RegexOptions.Multiline | RegexOptions.IgnoreCase).Trim();
         }
 
-        #endregion VIP emails
+        #endregion Ribbon VIP emails
 
         #region Legacv code
 
